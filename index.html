@@ -1,0 +1,3617 @@
+<!DOCTYPE html>
+<html lang='ru'>
+<head>
+  <meta charset='UTF-8' />
+  <meta name='viewport' content='width=device-width, initial-scale=1.0' />
+  <title>Belove — дневник питания, воды и БЖУ</title>
+  <meta
+    name='description'
+    content='Belove — современный дневник питания: приёмы пищи, автоматический подсчёт калорий и БЖУ, вода, профиль и персональные цели.'
+  />
+  <script src='https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4'></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6efe7;
+      --bg-2: #fffaf4;
+      --card: rgba(255, 252, 247, 0.96);
+      --card-strong: rgba(255, 255, 255, 0.92);
+      --border: rgba(99, 68, 43, 0.12);
+      --border-strong: rgba(99, 68, 43, 0.22);
+      --text: #4a3324;
+      --muted: #8a6d58;
+      --accent: #8b5e3c;
+      --accent-2: #bf8b62;
+      --accent-soft: #efe0d0;
+      --danger: #b75b5b;
+      --success: #5e8b6f;
+      --water: #7db6d9;
+      --shadow-lg: 0 24px 64px rgba(89, 60, 39, 0.12);
+      --shadow-md: 0 12px 26px rgba(89, 60, 39, 0.08);
+      --radius-xl: 28px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(238, 220, 201, 0.92), transparent 22%),
+        radial-gradient(circle at top right, rgba(210, 182, 155, 0.22), transparent 18%),
+        linear-gradient(180deg, #fffaf6 0%, #f7efe6 48%, #f2e3d5 100%);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body.page-enter {
+      overflow: hidden;
+    }
+
+    body.page-enter .page-shell {
+      opacity: 0;
+      transform: translateY(34px) scale(0.985);
+      filter: blur(14px);
+    }
+
+    body.page-ready .page-shell {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      filter: blur(0);
+      transition:
+        opacity 0.95s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.95s cubic-bezier(0.22, 1, 0.36, 1),
+        filter 0.95s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    input,
+    textarea,
+    [data-allow-select='true'] {
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    button,
+    a {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .page-shell {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    .main-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      backdrop-filter: blur(14px);
+    }
+
+    .soft-card {
+      background: var(--card-strong);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+    }
+
+    .section-card {
+      background: linear-gradient(180deg, rgba(255, 253, 249, 0.98), rgba(252, 245, 237, 0.96));
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-md);
+    }
+
+    .brand-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid var(--border);
+      background: rgba(255, 252, 247, 0.92);
+    }
+
+    .brand-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    }
+
+    .metric-value {
+      font-size: clamp(1.9rem, 3vw, 3rem);
+      line-height: 1;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 13px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: linear-gradient(180deg, rgba(230, 216, 203, 0.92), rgba(215, 196, 182, 0.76));
+      border: 1px solid rgba(99, 68, 43, 0.08);
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0;
+      border-radius: 999px;
+      transition: width 0.35s ease;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      box-shadow: 0 0 24px rgba(191, 139, 98, 0.24);
+    }
+
+    .progress-bar.water {
+      background: linear-gradient(90deg, #73b2d7, #8fc8ea);
+      box-shadow: 0 0 24px rgba(125, 182, 217, 0.24);
+    }
+
+    .chip-link,
+    .quick-pick,
+    .choice-btn,
+    .size-option,
+    .water-chip,
+    .dropdown-option,
+    .remove-btn,
+    .btn,
+    .btn-secondary {
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease, opacity 0.18s ease;
+    }
+
+    .chip-link,
+    .quick-pick,
+    .choice-btn,
+    .size-option,
+    .water-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 11px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(255, 252, 247, 0.98);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 8px 18px rgba(89, 60, 39, 0.05);
+      text-decoration: none;
+    }
+
+    .chip-link:hover,
+    .quick-pick:hover,
+    .choice-btn:hover,
+    .size-option:hover,
+    .water-chip:hover {
+      transform: translateY(-1px);
+      border-color: var(--border-strong);
+    }
+
+    .choice-btn.active,
+    .size-option.active,
+    .water-chip.active {
+      color: #fff;
+      border-color: rgba(139, 94, 60, 0.62);
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 14px 24px rgba(139, 94, 60, 0.18);
+    }
+
+    .btn {
+      min-height: 52px;
+      border: 0;
+      border-radius: 16px;
+      padding: 14px 18px;
+      font-size: 15px;
+      font-weight: 800;
+      color: #fff;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 14px 28px rgba(139, 94, 60, 0.18);
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 32px rgba(139, 94, 60, 0.22);
+    }
+
+    .btn-secondary {
+      min-height: 52px;
+      border-radius: 16px;
+      padding: 14px 18px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--text);
+      border: 1px solid var(--border);
+      background: rgba(255, 252, 248, 0.96);
+      box-shadow: 0 8px 18px rgba(89, 60, 39, 0.06);
+    }
+
+    .btn-secondary:hover {
+      transform: translateY(-1px);
+      border-color: var(--border-strong);
+    }
+
+    .meal-section {
+      scroll-margin-top: 22px;
+    }
+
+    .meal-title {
+      font-size: clamp(1.35rem, 2vw, 1.85rem);
+      line-height: 1.1;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    .meal-subgrid,
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .summary-grid.five {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+
+    .summary-top {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+      gap: 12px;
+      width: 100%;
+    }
+
+    .summary-metric {
+      position: relative;
+      display: flex;
+      min-height: 120px;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      border-radius: 24px;
+      border: 1px solid rgba(99, 68, 43, 0.1);
+      background: linear-gradient(180deg, rgba(255, 253, 250, 0.98), rgba(249, 241, 233, 0.96));
+      padding: 16px;
+      box-shadow: 0 14px 28px rgba(89, 60, 39, 0.08);
+    }
+
+    .summary-metric::after {
+      content: '';
+      position: absolute;
+      right: -18px;
+      top: -18px;
+      width: 72px;
+      height: 72px;
+      border-radius: 999px;
+      background: radial-gradient(circle, rgba(191, 139, 98, 0.18), transparent 68%);
+      pointer-events: none;
+    }
+
+    .summary-metric[data-tone='water']::after {
+      background: radial-gradient(circle, rgba(125, 182, 217, 0.22), transparent 68%);
+    }
+
+    .summary-metric[data-tone='entries']::after {
+      background: radial-gradient(circle, rgba(139, 94, 60, 0.16), transparent 68%);
+    }
+
+    .summary-metric-top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .summary-metric-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 0 0 6px rgba(191, 139, 98, 0.1);
+      flex-shrink: 0;
+    }
+
+    .summary-metric[data-tone='water'] .summary-metric-dot {
+      background: linear-gradient(135deg, #73b2d7, #8fc8ea);
+      box-shadow: 0 0 0 6px rgba(125, 182, 217, 0.12);
+    }
+
+    .summary-metric-number {
+      margin-top: 14px;
+      font-size: clamp(1.15rem, 1.65vw, 1.9rem);
+      line-height: 1.05;
+      font-weight: 800;
+      letter-spacing: -0.04em;
+      color: var(--text);
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .summary-metric-subtext {
+      margin-top: 10px;
+      font-size: 12px;
+      line-height: 1.45;
+      color: var(--muted);
+    }
+
+    .meal-stat {
+      padding: 12px;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: rgba(255, 252, 248, 0.95);
+    }
+
+    .meal-stat-label {
+      font-size: 11px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .meal-stat-value {
+      margin-top: 6px;
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .input-label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .input-field {
+      width: 100%;
+      min-height: 52px;
+      border-radius: 16px;
+      border: 1px solid rgba(99, 68, 43, 0.14);
+      background: rgba(255, 253, 250, 0.98);
+      padding: 14px 16px;
+      font-size: 15px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+    }
+
+    .input-field::placeholder {
+      color: #b39b8a;
+    }
+
+    .input-field:focus {
+      border-color: rgba(191, 139, 98, 0.82);
+      box-shadow: 0 0 0 4px rgba(191, 139, 98, 0.12);
+      transform: translateY(-1px);
+    }
+
+    .search-wrap {
+      position: relative;
+    }
+
+    .search-dropdown {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      right: 0;
+      z-index: 40;
+      overflow: hidden;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: rgba(255, 253, 250, 0.98);
+      box-shadow: 0 24px 44px rgba(89, 60, 39, 0.14);
+      backdrop-filter: blur(12px);
+    }
+
+    .search-results {
+      max-height: 340px;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .dropdown-option {
+      width: 100%;
+      border: 1px solid transparent;
+      border-radius: 16px;
+      background: transparent;
+      padding: 12px;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .dropdown-option:hover,
+    .dropdown-option.active {
+      background: rgba(191, 139, 98, 0.08);
+      border-color: rgba(191, 139, 98, 0.14);
+      transform: translateY(-1px);
+    }
+
+    .preview-box {
+      padding: 14px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255, 251, 246, 0.95), rgba(248, 240, 232, 0.95));
+    }
+
+    .preview-name,
+    .note-line {
+      min-height: 20px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .error-line {
+      min-height: 20px;
+      font-size: 12px;
+      color: var(--danger);
+      font-weight: 700;
+    }
+
+    .food-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: start;
+      padding: 16px;
+      border-radius: 22px;
+      border: 1px solid var(--border);
+      background: rgba(255, 252, 248, 0.96);
+      box-shadow: 0 10px 24px rgba(89, 60, 39, 0.06);
+      animation: fadeUp 0.26s ease;
+    }
+
+    .macro-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .macro-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 1px solid var(--border);
+      background: rgba(255, 249, 244, 0.98);
+      color: var(--text);
+    }
+
+    .remove-btn {
+      min-width: 112px;
+      border: 1px solid rgba(183, 91, 91, 0.18);
+      background: rgba(255, 241, 241, 0.96);
+      color: var(--danger);
+      border-radius: 14px;
+      padding: 12px 14px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .remove-btn:hover {
+      transform: translateY(-1px);
+      background: rgba(255, 234, 234, 1);
+    }
+
+    .empty-box {
+      padding: 18px;
+      border-radius: 20px;
+      border: 1px dashed rgba(99, 68, 43, 0.18);
+      background: rgba(255, 251, 247, 0.76);
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%) translateY(12px);
+      z-index: 100;
+      min-width: min(92vw, 340px);
+      max-width: 92vw;
+      padding: 14px 16px;
+      border-radius: 18px;
+      color: #fff;
+      background: rgba(74, 51, 36, 0.95);
+      box-shadow: 0 20px 44px rgba(74, 51, 36, 0.28);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.22s ease, transform 0.22s ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .sticky-card {
+      position: sticky;
+      top: 16px;
+    }
+
+    .profile-corner {
+      width: min(100%, 320px);
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 400;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(49, 34, 24, 0.48);
+      backdrop-filter: blur(8px);
+    }
+
+    .modal.hidden {
+      display: none;
+    }
+
+    .modal-panel {
+      width: min(100%, 920px);
+      max-height: calc(100vh - 36px);
+      overflow: auto;
+      border-radius: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: linear-gradient(180deg, rgba(255, 252, 247, 0.98), rgba(249, 241, 233, 0.98));
+      box-shadow: 0 36px 80px rgba(49, 34, 24, 0.24);
+    }
+
+    .account-prompt-panel {
+      position: relative;
+      z-index: 2;
+      width: min(100%, 460px);
+      border-radius: 28px;
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      background: linear-gradient(180deg, rgba(255, 252, 247, 0.985), rgba(248, 239, 230, 0.985));
+      box-shadow: 0 34px 80px rgba(49, 34, 24, 0.26);
+      animation: fadeUp 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .account-prompt-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 52px;
+      height: 52px;
+      border-radius: 18px;
+      background: radial-gradient(circle at top, rgba(255, 251, 247, 1), rgba(239, 224, 208, 0.95));
+      border: 1px solid rgba(139, 94, 60, 0.14);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      font-size: 24px;
+    }
+
+    .formula-note {
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: rgba(255, 251, 246, 0.9);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .tiny-label {
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .divider-line {
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(99, 68, 43, 0.16), transparent);
+    }
+
+    .reveal-block {
+      opacity: 0;
+      transform: translateY(28px) scale(0.985);
+      filter: blur(8px);
+      transition:
+        opacity 0.75s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.75s cubic-bezier(0.22, 1, 0.36, 1),
+        filter 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+      transition-delay: var(--reveal-delay, 0ms);
+      will-change: opacity, transform, filter;
+    }
+
+    .reveal-block.is-visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      filter: blur(0);
+    }
+
+    .history-filter {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      background: rgba(255, 252, 247, 0.98);
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 8px 18px rgba(89, 60, 39, 0.05);
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease, color 0.18s ease;
+    }
+
+    .history-filter:hover {
+      transform: translateY(-1px);
+      border-color: var(--border-strong);
+    }
+
+    .history-filter.active {
+      color: #fff;
+      border-color: rgba(139, 94, 60, 0.62);
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 14px 24px rgba(139, 94, 60, 0.18);
+    }
+
+    .log-feed {
+      display: grid;
+      gap: 12px;
+    }
+
+    .log-entry {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: start;
+      padding: 16px;
+      border-radius: 24px;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255, 253, 249, 0.98), rgba(250, 243, 235, 0.96));
+      box-shadow: 0 12px 28px rgba(89, 60, 39, 0.07);
+    }
+
+    .log-entry-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 18px;
+      border: 1px solid rgba(139, 94, 60, 0.14);
+      background: radial-gradient(circle at top, rgba(255, 250, 245, 0.98), rgba(239, 224, 208, 0.92));
+      font-size: 22px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+      flex-shrink: 0;
+    }
+
+    .log-entry-icon.water {
+      border-color: rgba(125, 182, 217, 0.22);
+      background: radial-gradient(circle at top, rgba(246, 251, 255, 0.98), rgba(224, 240, 248, 0.96));
+    }
+
+    .log-entry-title {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--text);
+    }
+
+    .log-entry-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 28px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+      background: rgba(255, 251, 246, 0.95);
+    }
+
+    .log-entry-meta {
+      margin-top: 6px;
+      font-size: 12px;
+      line-height: 1.5;
+      color: var(--muted);
+    }
+
+    .log-entry-detail {
+      margin-top: 8px;
+      font-size: 13px;
+      line-height: 1.55;
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .log-entry-side {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 38px;
+      min-width: 86px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(255, 250, 245, 0.95);
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .week-strip {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .week-day-card {
+      min-width: 0;
+      padding: 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: rgba(255, 252, 248, 0.95);
+      box-shadow: 0 10px 22px rgba(89, 60, 39, 0.05);
+    }
+
+    .week-day-card.today {
+      border-color: rgba(139, 94, 60, 0.26);
+      background: linear-gradient(180deg, rgba(255, 250, 245, 1), rgba(242, 229, 216, 0.98));
+      box-shadow: 0 14px 26px rgba(139, 94, 60, 0.1);
+    }
+
+    .week-day-label {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+    }
+
+    .week-day-kcal {
+      margin-top: 10px;
+      font-size: 1.05rem;
+      font-weight: 800;
+      line-height: 1;
+      color: var(--text);
+    }
+
+    .week-day-water {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    #mealQuickLinks {
+      scrollbar-width: none;
+    }
+
+    #mealQuickLinks::-webkit-scrollbar,
+    .week-strip::-webkit-scrollbar {
+      display: none;
+    }
+
+    .mobile-dock {
+      position: fixed;
+      left: 12px;
+      right: 12px;
+      bottom: 12px;
+      z-index: 90;
+      display: none;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+      padding: 10px;
+      border-radius: 28px;
+      border: 1px solid rgba(99, 68, 43, 0.12);
+      background: rgba(255, 251, 246, 0.9);
+      box-shadow: 0 24px 40px rgba(89, 60, 39, 0.16);
+      backdrop-filter: blur(14px);
+    }
+
+    .mobile-dock-link {
+      display: flex;
+      min-height: 58px;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      border: 0;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.48);
+      color: var(--text);
+      font-size: 11px;
+      font-weight: 800;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .mobile-dock-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      background: rgba(139, 94, 60, 0.1);
+      color: var(--accent);
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(14px) scale(0.99);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @media (max-width: 1000px) {
+      .summary-grid.five,
+      .meal-subgrid,
+      .summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 768px) {
+      body {
+        padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+      }
+
+      .page-shell {
+        padding: 10px;
+      }
+
+      .page-shell > header,
+      .page-shell > section {
+        margin-bottom: 12px !important;
+      }
+
+      .main-card,
+      .section-card,
+      .soft-card,
+      .modal-panel {
+        border-radius: 18px;
+      }
+
+      header .main-card {
+        padding: 14px !important;
+      }
+
+      header h1 {
+        margin-top: 10px;
+        font-size: 2rem !important;
+        line-height: 1.02;
+        letter-spacing: -0.05em;
+      }
+
+      #heroText {
+        margin-top: 8px;
+        font-size: 13px !important;
+        line-height: 1.5 !important;
+      }
+
+      .brand-badge {
+        padding: 7px 11px;
+        font-size: 10px;
+      }
+
+      .profile-corner {
+        width: 100%;
+      }
+
+      .profile-corner.soft-card {
+        padding: 12px !important;
+      }
+
+      .profile-corner .meal-stat {
+        padding: 10px;
+        border-radius: 14px;
+      }
+
+      .profile-corner .meal-stat-value {
+        font-size: 0.92rem;
+      }
+
+      .sticky-card {
+        position: static;
+      }
+
+      .summary-top {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .summary-metric {
+        min-height: 96px;
+        padding: 12px;
+        border-radius: 18px;
+      }
+
+      .summary-metric::after {
+        width: 54px;
+        height: 54px;
+        right: -14px;
+        top: -14px;
+      }
+
+      .summary-metric-top {
+        gap: 6px;
+        font-size: 10px;
+        letter-spacing: 0.1em;
+      }
+
+      .summary-metric-dot {
+        width: 8px;
+        height: 8px;
+        box-shadow: 0 0 0 4px rgba(191, 139, 98, 0.1);
+      }
+
+      .summary-metric-number {
+        margin-top: 10px;
+        font-size: 1.18rem;
+      }
+
+      .summary-metric-subtext {
+        display: none;
+      }
+
+      .metric-value {
+        font-size: 2.1rem;
+      }
+
+      .meal-title {
+        font-size: 1.2rem;
+      }
+
+      .meal-section {
+        scroll-margin-top: 10px;
+      }
+
+      .meal-stat {
+        padding: 10px;
+        border-radius: 14px;
+      }
+
+      .meal-stat-label,
+      .tiny-label {
+        font-size: 10px;
+        letter-spacing: 0.1em;
+      }
+
+      .meal-stat-value {
+        margin-top: 4px;
+        font-size: 0.95rem;
+      }
+
+      .food-row {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        padding: 12px;
+        border-radius: 18px;
+      }
+
+      .macro-row {
+        gap: 6px;
+        margin-top: 10px;
+      }
+
+      .macro-badge {
+        padding: 6px 8px;
+        font-size: 11px;
+      }
+
+      .remove-btn {
+        width: 100%;
+        min-width: 0;
+        padding: 11px 12px;
+      }
+
+      .input-label {
+        margin-bottom: 6px;
+        font-size: 12px;
+      }
+
+      .btn,
+      .btn-secondary,
+      .input-field {
+        min-height: 46px;
+        border-radius: 14px;
+        padding: 12px 14px;
+        font-size: 14px;
+      }
+
+      .chip-link,
+      .quick-pick,
+      .choice-btn,
+      .size-option,
+      .water-chip,
+      .history-filter {
+        min-height: 38px;
+        padding: 8px 11px;
+        font-size: 11px;
+      }
+
+      .preview-box,
+      .empty-box,
+      .formula-note {
+        padding: 12px;
+        border-radius: 16px;
+      }
+
+      .search-dropdown {
+        border-radius: 16px;
+      }
+
+      .search-results {
+        max-height: 260px;
+        padding: 6px;
+      }
+
+      .dropdown-option {
+        padding: 10px;
+        border-radius: 14px;
+      }
+
+      #mealQuickLinks {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        gap: 6px;
+        padding-bottom: 4px;
+        margin-inline: -2px;
+        padding-inline: 2px;
+        scroll-snap-type: x proximity;
+      }
+
+      #mealQuickLinks .chip-link {
+        flex: 0 0 auto;
+        scroll-snap-align: start;
+      }
+
+      .log-entry {
+        grid-template-columns: 40px minmax(0, 1fr);
+        gap: 10px;
+        padding: 12px;
+        border-radius: 18px;
+      }
+
+      .log-entry-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 14px;
+        font-size: 18px;
+      }
+
+      .log-entry-title {
+        font-size: 0.92rem;
+      }
+
+      .log-entry-meta,
+      .log-entry-detail {
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .log-entry-side {
+        grid-column: 2;
+        justify-self: start;
+        min-width: auto;
+        min-height: 32px;
+        margin-top: 2px;
+        padding: 6px 10px;
+        font-size: 10px;
+      }
+
+      .week-strip {
+        grid-template-columns: repeat(7, minmax(82px, 1fr));
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+      }
+
+      .week-day-card {
+        padding: 10px;
+        border-radius: 16px;
+      }
+
+      .week-day-kcal {
+        margin-top: 8px;
+        font-size: 0.95rem;
+      }
+
+      .week-day-water {
+        margin-top: 6px;
+        font-size: 11px;
+      }
+
+      .modal {
+        padding: 8px;
+      }
+
+      .modal-panel {
+        max-height: calc(100vh - 16px);
+        border-radius: 20px;
+      }
+
+      .mobile-dock {
+        display: grid;
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
+        gap: 6px;
+        padding: 6px;
+        border-radius: 22px;
+      }
+
+      .mobile-dock-link {
+        min-height: 48px;
+        gap: 4px;
+        border-radius: 14px;
+        font-size: 9.5px;
+      }
+
+      .mobile-dock-icon {
+        width: 22px;
+        height: 22px;
+        font-size: 12px;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .page-shell {
+        padding: 8px;
+      }
+
+      header .main-card,
+      .main-card.reveal,
+      .section-card,
+      .soft-card {
+        padding: 12px !important;
+      }
+
+      .summary-grid.five,
+      .meal-subgrid,
+      .summary-grid,
+      .summary-top {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .summary-top .summary-metric:last-child {
+        grid-column: span 2;
+      }
+
+      .summary-metric {
+        min-height: 88px;
+        padding: 11px;
+      }
+
+      .summary-metric-number {
+        font-size: 1.08rem;
+      }
+
+      .metric-value {
+        font-size: 1.9rem;
+      }
+
+      header h1 {
+        font-size: 1.7rem !important;
+      }
+
+      #heroText {
+        font-size: 12px !important;
+      }
+
+      .meal-title {
+        font-size: 1.08rem;
+      }
+
+      .meal-stat,
+      .preview-box,
+      .empty-box,
+      .formula-note {
+        padding: 10px;
+      }
+
+      .btn,
+      .btn-secondary,
+      .input-field {
+        min-height: 44px;
+        padding: 11px 12px;
+        font-size: 13px;
+      }
+
+      .chip-link,
+      .quick-pick,
+      .choice-btn,
+      .size-option,
+      .water-chip,
+      .history-filter {
+        min-height: 36px;
+        padding: 7px 10px;
+        font-size: 10.5px;
+      }
+
+      .log-entry {
+        padding: 10px;
+      }
+
+      .mobile-dock {
+        left: 6px;
+        right: 6px;
+        bottom: 6px;
+        padding: 5px;
+      }
+
+      .mobile-dock-link {
+        min-height: 44px;
+        font-size: 9px;
+      }
+
+      .mobile-dock-icon {
+        width: 20px;
+        height: 20px;
+        font-size: 11px;
+      }
+    }
+
+    @media (max-width: 390px) {
+      .summary-top,
+      .summary-grid.five,
+      .meal-subgrid,
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .summary-top .summary-metric:last-child {
+        grid-column: auto;
+      }
+
+      .profile-corner .grid,
+      .meal-subgrid,
+      .summary-grid {
+        gap: 6px;
+      }
+
+      .summary-metric {
+        min-height: 80px;
+      }
+
+      .week-strip {
+        grid-template-columns: repeat(7, minmax(78px, 1fr));
+      }
+    }
+
+  </style>
+</head>
+<body>
+  <div class='page-shell'>
+    <header class='mb-4 sm:mb-6'>
+      <div class='main-card p-4 sm:p-7'>
+        <div class='flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-start lg:justify-between'>
+          <div class='profile-corner soft-card rounded-[20px] p-3 sm:rounded-[24px] sm:p-4 lg:order-1'>
+            <div class='flex items-start justify-between gap-3'>
+              <div>
+                <p class='text-xs uppercase tracking-[0.18em] text-[var(--muted)]'>Профиль</p>
+                <p id='helloName' class='mt-1 text-lg font-semibold text-[var(--text)]'>Профиль не заполнен</p>
+                <p id='currentDate' class='mt-1 text-sm text-[var(--muted)]'>—</p>
+              </div>
+              <button id='editProfileBtn' type='button' class='btn-secondary !min-h-0 px-4 py-2 text-sm'>Открыть</button>
+            </div>
+            <div class='mt-4 grid grid-cols-2 gap-3'>
+              <div class='meal-stat'>
+                <div class='meal-stat-label'>Рост / вес</div>
+                <div id='profileCornerBody' class='meal-stat-value'>—</div>
+              </div>
+              <div class='meal-stat'>
+                <div class='meal-stat-label'>Цель</div>
+                <div id='profileCornerGoal' class='meal-stat-value'>—</div>
+              </div>
+            </div>
+            <button id='clearDayBtn' type='button' class='btn-secondary mt-3 w-full'>Очистить день</button>
+          </div>
+
+          <div class='max-w-3xl lg:order-2 lg:flex-1'>
+            <div class='brand-badge'>
+              <span class='brand-dot'></span>
+              Belove
+            </div>
+            <h1 class='mt-4 text-4xl font-bold tracking-tight sm:text-5xl'>Персональный дневник питания</h1>
+            <p id='heroText' class='mt-3 max-w-2xl text-sm leading-6 text-[var(--muted)] sm:text-base sm:leading-7'>
+              Выбирай блюдо, пиши только граммы или миллилитры, а Belove сам считает калории, белки, жиры и углеводы по каждому приёму пищи и за весь день.
+            </p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section class='mb-4 sm:mb-6 grid gap-4 sm:gap-6 xl:grid-cols-[1.15fr_0.85fr]'>
+      <div class='sticky-card'>
+        <div class='main-card reveal p-4 sm:p-6'>
+          <div class='flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between'>
+            <div>
+              <p class='text-xs uppercase tracking-[0.2em] text-[var(--muted)]'>Итог за день</p>
+              <div class='mt-2 flex items-end gap-3'>
+                <div id='dayCalories' class='metric-value'>0</div>
+                <div class='pb-1 text-sm font-medium text-[var(--muted)]'>ккал</div>
+              </div>
+              <p class='mt-2 text-sm text-[var(--muted)]'>Утро, перекусы, обед и ужин суммируются автоматически. Вода считается отдельно, но тоже входит в дневной прогресс.</p>
+            </div>
+            <div class='summary-top'>
+              <div class='summary-metric' data-tone='protein'>
+                <div class='summary-metric-top'>
+                  <span class='summary-metric-dot'></span>
+                  Белки
+                </div>
+                <div>
+                  <p id='dayProtein' class='summary-metric-number'>0 г</p>
+                  <p class='summary-metric-subtext'>Сумма белка за день по всем блюдам.</p>
+                </div>
+              </div>
+              <div class='summary-metric' data-tone='fat'>
+                <div class='summary-metric-top'>
+                  <span class='summary-metric-dot'></span>
+                  Жиры
+                </div>
+                <div>
+                  <p id='dayFat' class='summary-metric-number'>0 г</p>
+                  <p class='summary-metric-subtext'>Учитываются все приёмы пищи за сегодня.</p>
+                </div>
+              </div>
+              <div class='summary-metric' data-tone='carbs'>
+                <div class='summary-metric-top'>
+                  <span class='summary-metric-dot'></span>
+                  Углеводы
+                </div>
+                <div>
+                  <p id='dayCarbs' class='summary-metric-number'>0 г</p>
+                  <p class='summary-metric-subtext'>Автоматический подсчёт по базе продуктов.</p>
+                </div>
+              </div>
+              <div class='summary-metric' data-tone='water'>
+                <div class='summary-metric-top'>
+                  <span class='summary-metric-dot'></span>
+                  Вода
+                </div>
+                <div>
+                  <p id='dayWater' class='summary-metric-number'>0 мл</p>
+                  <p class='summary-metric-subtext'>Питьё и жидкость считаются отдельно.</p>
+                </div>
+              </div>
+              <div class='summary-metric' data-tone='entries'>
+                <div class='summary-metric-top'>
+                  <span class='summary-metric-dot'></span>
+                  Блюда
+                </div>
+                <div>
+                  <p id='dayEntries' class='summary-metric-number'>0</p>
+                  <p class='summary-metric-subtext'>Всего записей за текущий день.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class='mt-6 grid gap-4 md:grid-cols-2'>
+            <div>
+              <div class='mb-2 flex items-center justify-between text-sm font-medium'>
+                <span>Калории</span>
+                <span id='goalLabelCalories'>0 / 2000 ккал</span>
+              </div>
+              <div class='progress-track'><div id='progressCalories' class='progress-bar'></div></div>
+            </div>
+            <div>
+              <div class='mb-2 flex items-center justify-between text-sm font-medium'>
+                <span>Белки</span>
+                <span id='goalLabelProtein'>0 / 120 г</span>
+              </div>
+              <div class='progress-track'><div id='progressProtein' class='progress-bar'></div></div>
+            </div>
+            <div>
+              <div class='mb-2 flex items-center justify-between text-sm font-medium'>
+                <span>Жиры</span>
+                <span id='goalLabelFat'>0 / 70 г</span>
+              </div>
+              <div class='progress-track'><div id='progressFat' class='progress-bar'></div></div>
+            </div>
+            <div>
+              <div class='mb-2 flex items-center justify-between text-sm font-medium'>
+                <span>Углеводы</span>
+                <span id='goalLabelCarbs'>0 / 230 г</span>
+              </div>
+              <div class='progress-track'><div id='progressCarbs' class='progress-bar'></div></div>
+            </div>
+            <div class='md:col-span-2'>
+              <div class='mb-2 flex items-center justify-between text-sm font-medium'>
+                <span>Вода</span>
+                <span id='goalLabelWater'>0 / 2500 мл</span>
+              </div>
+              <div class='progress-track'><div id='progressWater' class='progress-bar water'></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class='grid gap-4 sm:gap-6'>
+        <div class='main-card p-4 sm:p-6'>
+          <div class='flex items-start justify-between gap-3 sm:gap-4'>
+            <div>
+              <h2 class='text-xl font-semibold'>Персональные параметры</h2>
+              <p class='mt-1 text-sm text-[var(--muted)]'>Здесь отображается расчёт по профилю, а сам профиль всегда виден сверху слева.</p>
+            </div>
+            <button id='recalculateBtn' type='button' class='btn-secondary'>Пересчитать</button>
+          </div>
+
+          <div class='mt-4 summary-grid'>
+            <div class='meal-stat'>
+              <div class='meal-stat-label'>Имя</div>
+              <div id='profileNameValue' class='meal-stat-value'>—</div>
+            </div>
+            <div class='meal-stat'>
+              <div class='meal-stat-label'>Рост / вес</div>
+              <div id='profileBodyValue' class='meal-stat-value'>—</div>
+            </div>
+            <div class='meal-stat'>
+              <div class='meal-stat-label'>Активность</div>
+              <div id='profileActivityValue' class='meal-stat-value'>—</div>
+            </div>
+            <div class='meal-stat'>
+              <div class='meal-stat-label'>Цель</div>
+              <div id='profileGoalValue' class='meal-stat-value'>—</div>
+            </div>
+          </div>
+
+          <div class='formula-note mt-4'>
+            <div class='tiny-label mb-2'>Реалистичный расчёт</div>
+            <div id='formulaSummary'>
+              Цели рассчитываются по формуле Mifflin–St Jeor, с коэффициентом активности. Вода рассчитывается по массе тела с поправкой на активность.
+            </div>
+          </div>
+        </div>
+
+        <div class='main-card p-4 sm:p-6'>
+          <div>
+            <h2 class='text-lg sm:text-xl font-semibold'>Цели на день</h2>
+            <p class='mt-1 text-sm text-[var(--muted)]'>Если нужно, их можно корректировать вручную.</p>
+          </div>
+
+          <form id='goalsForm' class='mt-5 grid gap-3 sm:grid-cols-2'>
+            <div>
+              <label class='input-label' for='goalCalories'>Калории, ккал</label>
+              <input id='goalCalories' class='input-field' type='number' min='1' step='1' inputmode='numeric' />
+            </div>
+            <div>
+              <label class='input-label' for='goalProtein'>Белки, г</label>
+              <input id='goalProtein' class='input-field' type='number' min='1' step='1' inputmode='numeric' />
+            </div>
+            <div>
+              <label class='input-label' for='goalFat'>Жиры, г</label>
+              <input id='goalFat' class='input-field' type='number' min='1' step='1' inputmode='numeric' />
+            </div>
+            <div>
+              <label class='input-label' for='goalCarbs'>Углеводы, г</label>
+              <input id='goalCarbs' class='input-field' type='number' min='1' step='1' inputmode='numeric' />
+            </div>
+            <div class='sm:col-span-2'>
+              <label class='input-label' for='goalWater'>Вода, мл</label>
+              <input id='goalWater' class='input-field' type='number' min='100' step='50' inputmode='numeric' />
+            </div>
+          </form>
+
+          <div class='mt-4 grid gap-3 sm:grid-cols-2'>
+            <button id='resetGoalsBtn' type='button' class='btn-secondary'>Сбросить цели</button>
+            <div class='soft-card rounded-[18px] p-4 text-sm text-[var(--muted)]'>База продуктов расширена: крупы, макароны, рыба, мясо, морепродукты, овощи, фрукты, супы, десерты и напитки.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class='mb-4 sm:mb-6 main-card p-4 sm:p-6'>
+      <div class='flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between'>
+        <div class='max-w-2xl'>
+          <h2 class='text-xl font-semibold'>Вода</h2>
+          <p class='mt-1 text-sm text-[var(--muted)]'>Добавляй воду отдельно. Здесь считается общий объём за день и прогресс по цели.</p>
+        </div>
+        <div class='soft-card rounded-[18px] px-4 py-3'>
+          <div class='tiny-label'>Сегодня выпито</div>
+          <div id='waterHeadline' class='mt-2 text-2xl font-bold'>0 мл</div>
+        </div>
+      </div>
+
+      <div class='mt-5 grid gap-4 xl:grid-cols-[0.95fr_1.05fr]'>
+        <div class='soft-card p-4'>
+          <div class='mb-4'>
+            <div class='mb-2 flex items-center justify-between text-sm font-medium'>
+              <span>Прогресс воды</span>
+              <span id='waterGoalInline'>0 / 2500 мл</span>
+            </div>
+            <div class='progress-track'><div id='progressWaterInline' class='progress-bar water'></div></div>
+          </div>
+
+          <div>
+            <p class='input-label'>Быстро добавить</p>
+            <div class='flex flex-wrap gap-2'>
+              <button type='button' class='water-chip' data-water-add='200'>+200 мл</button>
+              <button type='button' class='water-chip' data-water-add='250'>+250 мл</button>
+              <button type='button' class='water-chip' data-water-add='300'>+300 мл</button>
+              <button type='button' class='water-chip' data-water-add='500'>+500 мл</button>
+            </div>
+          </div>
+
+          <div class='mt-4 grid gap-3 sm:grid-cols-[1fr_auto]'>
+            <div>
+              <label class='input-label' for='waterAmountInput'>Свой объём, мл</label>
+              <input id='waterAmountInput' class='input-field' type='number' min='50' step='50' placeholder='250' inputmode='numeric' />
+              <div id='waterError' class='error-line mt-2'></div>
+            </div>
+            <div class='sm:self-end'>
+              <button id='addWaterBtn' type='button' class='btn w-full'>Добавить воду</button>
+            </div>
+          </div>
+        </div>
+
+        <div class='soft-card p-4'>
+          <div class='mb-4 flex items-center justify-between gap-3'>
+            <h3 class='text-lg font-semibold'>История воды</h3>
+            <div id='waterEntriesCount' class='rounded-full border border-[var(--border)] bg-[rgba(255,250,245,0.95)] px-3 py-2 text-sm font-semibold text-[var(--muted)]'>0 записей</div>
+          </div>
+          <div id='waterList' class='space-y-3'></div>
+        </div>
+      </div>
+    </section>
+
+    <section id='historySection' class='mb-6 main-card p-5 sm:p-6 reveal-block'>
+      <div class='flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between'>
+        <div>
+          <h2 class='text-xl font-semibold'>История</h2>
+          <p class='mt-1 text-sm text-[var(--muted)]'>Здесь видно всё за сегодня и короткая лента за прошлую неделю: калории, вода и последние записи.</p>
+        </div>
+        <div id='logCount' class='rounded-full border border-[var(--border)] bg-[rgba(255,250,245,0.95)] px-3 py-2 text-sm font-semibold text-[var(--muted)]'>0 событий</div>
+      </div>
+
+      <div class='mt-5'>
+        <div class='flex flex-wrap gap-2' id='historyFilters'>
+          <button type='button' class='history-filter active' data-log-filter='all'>Всё</button>
+          <button type='button' class='history-filter' data-log-filter='food'>Еда</button>
+          <button type='button' class='history-filter' data-log-filter='water'>Вода</button>
+        </div>
+      </div>
+
+      <div class='mt-5'>
+        <div class='mb-3 flex items-center justify-between gap-3'>
+          <h3 class='text-lg font-semibold'>Прошлая неделя</h3>
+          <div class='text-sm text-[var(--muted)]'>7 последних дней</div>
+        </div>
+        <div id='weeklyHistory' class='week-strip'></div>
+      </div>
+
+      <div class='mt-6'>
+        <div class='mb-3 flex items-center justify-between gap-3'>
+          <h3 class='text-lg font-semibold'>Сегодня</h3>
+          <div class='text-sm text-[var(--muted)]'>Сначала новые записи</div>
+        </div>
+        <div id='dailyLogList' class='log-feed'></div>
+      </div>
+    </section>
+
+    <section id='mealsNavSection' class='mb-6 main-card p-5 sm:p-6 reveal-block'>
+      <div class='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
+        <div>
+          <h2 class='text-xl font-semibold'>Переход к приёмам пищи</h2>
+          <p class='mt-1 text-sm text-[var(--muted)]'>Листай сверху вниз: утро, перекусы, обед и ужин. У каждого блока свой итог.</p>
+        </div>
+        <div id='mealQuickLinks' class='flex flex-wrap gap-3'></div>
+      </div>
+    </section>
+
+    <main id='mealSections' class='space-y-6'></main>
+  </div>
+
+  <nav class='mobile-dock' aria-label='Быстрая мобильная навигация'>
+    <a class='mobile-dock-link' href='#'>
+      <span class='mobile-dock-icon'>⌂</span>
+      <span>Главная</span>
+    </a>
+    <a class='mobile-dock-link' href='#historySection'>
+      <span class='mobile-dock-icon'>◷</span>
+      <span>История</span>
+    </a>
+    <a class='mobile-dock-link' href='#meal-morning'>
+      <span class='mobile-dock-icon'>☼</span>
+      <span>Утро</span>
+    </a>
+    <a class='mobile-dock-link' href='#meal-lunch'>
+      <span class='mobile-dock-icon'>◉</span>
+      <span>Обед</span>
+    </a>
+    <a class='mobile-dock-link' href='#meal-dinner'>
+      <span class='mobile-dock-icon'>☾</span>
+      <span>Ужин</span>
+    </a>
+  </nav>
+
+  <div id='accountPromptModal' class='modal hidden'>
+    <div class='account-prompt-panel p-5 sm:p-6'>
+      <div class='flex items-start gap-4'>
+        <div class='account-prompt-badge'>☕</div>
+        <div class='min-w-0 flex-1'>
+          <div class='tiny-label'>Belove</div>
+          <h2 class='mt-2 text-2xl font-bold tracking-tight'>Создайте аккаунт</h2>
+          <p class='mt-3 text-sm leading-6 text-[var(--muted)] sm:text-base'>
+            Чтобы Belove точнее рассчитывал калории, белки, жиры, углеводы и воду, сначала заполни свой профиль.
+          </p>
+        </div>
+      </div>
+
+      <div class='mt-5 grid gap-3 sm:grid-cols-2'>
+        <button id='openAccountPromptBtn' type='button' class='btn'>Создать аккаунт</button>
+        <button id='closeAccountPromptBtn' type='button' class='btn-secondary'>Позже</button>
+      </div>
+    </div>
+  </div>
+
+  <div id='profileModal' class='modal hidden'>
+    <div class='modal-panel p-5 sm:p-7'>
+      <div class='flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between'>
+        <div class='max-w-2xl'>
+          <div class='brand-badge'>
+            <span class='brand-dot'></span>
+            Belove
+          </div>
+          <h2 class='mt-4 text-3xl font-bold tracking-tight'>Регистрация и персональный расчёт</h2>
+          <p class='mt-3 text-sm leading-6 text-[var(--muted)] sm:text-base'>
+            Заполни профиль один раз. Belove рассчитает персональные цели по калориям, белкам, жирам, углеводам и воде.
+          </p>
+        </div>
+        <button id='closeProfileBtn' type='button' class='btn-secondary'>Закрыть</button>
+      </div>
+
+      <div class='divider-line my-5'></div>
+
+      <form id='profileForm' class='grid gap-5'>
+        <div class='grid gap-4 sm:grid-cols-3'>
+          <div class='sm:col-span-3'>
+            <label class='input-label' for='profileName'>Имя</label>
+            <input id='profileName' class='input-field' type='text' placeholder='Например: Алиса' autocomplete='off' data-allow-select='true' />
+          </div>
+          <div>
+            <label class='input-label' for='profileAge'>Возраст</label>
+            <input id='profileAge' class='input-field' type='number' min='10' max='100' step='1' placeholder='25' inputmode='numeric' />
+          </div>
+          <div>
+            <label class='input-label' for='profileHeight'>Рост, см</label>
+            <input id='profileHeight' class='input-field' type='number' min='120' max='230' step='1' placeholder='170' inputmode='numeric' />
+          </div>
+          <div>
+            <label class='input-label' for='profileWeight'>Вес, кг</label>
+            <input id='profileWeight' class='input-field' type='number' min='30' max='300' step='0.1' placeholder='65' inputmode='decimal' />
+          </div>
+        </div>
+
+        <div>
+          <label class='input-label'>Пол</label>
+          <div id='sexChoice' class='flex flex-wrap gap-2'>
+            <button type='button' class='choice-btn active' data-group='sex' data-value='female'>Женщина</button>
+            <button type='button' class='choice-btn' data-group='sex' data-value='male'>Мужчина</button>
+          </div>
+        </div>
+
+        <div>
+          <label class='input-label'>Активность</label>
+          <div id='activityChoice' class='flex flex-wrap gap-2'>
+            <button type='button' class='choice-btn active' data-group='activity' data-value='light'>Лёгкая</button>
+            <button type='button' class='choice-btn' data-group='activity' data-value='moderate'>Средняя</button>
+            <button type='button' class='choice-btn' data-group='activity' data-value='active'>Высокая</button>
+            <button type='button' class='choice-btn' data-group='activity' data-value='very'>Очень высокая</button>
+          </div>
+        </div>
+
+        <div>
+          <label class='input-label'>Цель</label>
+          <div id='goalChoice' class='flex flex-wrap gap-2'>
+            <button type='button' class='choice-btn active' data-group='goalMode' data-value='maintain'>Поддержание</button>
+            <button type='button' class='choice-btn' data-group='goalMode' data-value='lose'>Снижение веса</button>
+            <button type='button' class='choice-btn' data-group='goalMode' data-value='gain'>Набор массы</button>
+          </div>
+        </div>
+
+        <div class='formula-note'>
+          <div class='tiny-label mb-2'>Как считаются цели</div>
+          <div>
+            Калории — по формуле Mifflin–St Jeor с коэффициентом активности. Белки и жиры — от массы тела, углеводы — из остатка калорий. Вода — по весу с добавкой на активность.
+          </div>
+        </div>
+
+        <div id='profileError' class='error-line'></div>
+
+        <div class='grid gap-3 sm:grid-cols-2'>
+          <button type='submit' class='btn'>Сохранить профиль</button>
+          <button id='profileResetBtn' type='button' class='btn-secondary'>Сбросить профиль</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id='toast' class='toast'></div>
+
+  <script>
+    // Значения указаны на 100 г съедобной части продукта.
+    // Для расчётов использованы типовые справочные значения пищевой ценности
+    // (ориентир: FoodData Central / стандартные таблицы БЖУ). Для сложных блюд
+    // используются усреднённые значения, потому что рецепт может отличаться.
+
+    const PRODUCT_DATABASE = [];
+
+    function addProduct(id, name, category, calories, protein, fat, carbs, extra = {}) {
+      PRODUCT_DATABASE.push({ id, name, category, calories, protein, fat, carbs, ...extra });
+    }
+
+    function addSizeProduct(id, name, category, calories, protein, fat, carbs, sizes) {
+      addProduct(id, name, category, calories, protein, fat, carbs, {
+        amountMode: 'size',
+        sizes
+      });
+    }
+
+    function addMlProduct(id, name, category, calories, protein, fat, carbs, extra = {}) {
+      addProduct(id, name, category, calories, protein, fat, carbs, {
+        amountMode: 'ml',
+        ...extra
+      });
+    }
+
+    // Каши, яйца, молочное.
+    addProduct('oatmeal-water', 'Овсянка на воде', 'Каша', 68, 2.4, 1.4, 12);
+    addProduct('oatmeal-milk', 'Овсянка на молоке', 'Каша', 105, 4.1, 3.4, 14.2);
+    addProduct('buckwheat-porridge', 'Гречневая каша', 'Каша', 110, 4.2, 1.1, 21.3);
+    addProduct('rice-porridge-milk', 'Рисовая каша на молоке', 'Каша', 97, 2.5, 3.1, 15.5);
+    addProduct('millet-porridge', 'Пшённая каша', 'Каша', 119, 3.8, 3.3, 18.8);
+    addProduct('semolina-porridge', 'Манная каша', 'Каша', 98, 3, 2.5, 15.3);
+    addProduct('corn-porridge', 'Кукурузная каша', 'Каша', 86, 2.5, 1.2, 16.4);
+    addProduct('corn-flakes', 'Кукурузные хлопья', 'Сухие завтраки', 357, 7.4, 0.9, 84.1);
+    addProduct('oat-flakes', 'Овсяные хлопья', 'Сухие завтраки', 366, 11.9, 7.2, 69.3);
+    addProduct('muesli', 'Мюсли', 'Сухие завтраки', 352, 8.9, 5.8, 67.7);
+    addProduct('granola', 'Гранола', 'Сухие завтраки', 471, 10, 20, 64);
+    addProduct('chocolate-cereal-balls', 'Шоколадные шарики', 'Сухие завтраки', 380, 6.3, 3.4, 80.5);
+    addProduct('omelet', 'Омлет', 'Блюдо', 154, 10.3, 11, 1.9);
+    addProduct('boiled-eggs', 'Яйца варёные', 'Яйца', 157, 12.7, 11.5, 0.7);
+    addProduct('scrambled-eggs', 'Яичница', 'Яйца', 196, 13.6, 15, 1.1);
+    addProduct('fried-eggs', 'Яйца жареные', 'Яйца', 196, 13.6, 14.8, 1.2);
+    addProduct('cottage-0', 'Творог 0%', 'Молочное', 71, 16.5, 0.2, 1.3);
+    addProduct('cottage-2', 'Творог 2%', 'Молочное', 103, 18, 2, 3.3);
+    addProduct('cottage-5', 'Творог 5%', 'Молочное', 121, 17.2, 5, 1.8);
+    addProduct('cottage-9', 'Творог 9%', 'Молочное', 159, 16.7, 9, 2);
+    addProduct('greek-yogurt', 'Греческий йогурт', 'Молочное', 66, 8.5, 2, 3.8);
+    addProduct('natural-yogurt', 'Натуральный йогурт', 'Молочное', 61, 3.5, 3.3, 4.7);
+    addMlProduct('kefir-1', 'Кефир 1%', 'Напиток', 40, 3, 1, 4);
+    addMlProduct('kefir-25', 'Кефир 2.5%', 'Напиток', 53, 2.8, 2.5, 4);
+    addMlProduct('ryazhenka', 'Ряженка', 'Напиток', 67, 2.8, 4, 4.2);
+    addMlProduct('milk-25', 'Молоко 2.5%', 'Напиток', 52, 2.8, 2.5, 4.7);
+    addProduct('hard-cheese', 'Сыр твёрдый', 'Молочное', 350, 24, 27, 0);
+    addProduct('mozzarella', 'Моцарелла', 'Молочное', 280, 22, 17, 3);
+    addProduct('feta', 'Фета', 'Молочное', 264, 14.2, 21.3, 4.1);
+    addProduct('sour-cream-15', 'Сметана 15%', 'Молочное', 158, 2.6, 15, 3);
+    addProduct('butter', 'Сливочное масло', 'Молочное', 748, 0.5, 82.5, 0.8);
+    addProduct('casserole', 'Творожная запеканка', 'Блюдо', 168, 11, 6, 18);
+    addProduct('syrniki', 'Сырники', 'Блюдо', 220, 13, 9, 20);
+    addProduct('protein-pancakes', 'Овсяноблин', 'Блюдо', 170, 9, 6, 19);
+    addProduct('pancakes', 'Блины', 'Блюдо', 227, 6.1, 9.7, 28.3);
+
+    // Фрукты и ягоды.
+    addSizeProduct('banana', 'Банан', 'Фрукты', 89, 1.5, 0.3, 21, { small: 90, medium: 120, large: 150 });
+    addSizeProduct('apple', 'Яблоко', 'Фрукты', 52, 0.3, 0.2, 14, { small: 120, medium: 180, large: 230 });
+    addSizeProduct('pear', 'Груша', 'Фрукты', 57, 0.4, 0.1, 15, { small: 130, medium: 180, large: 230 });
+    addSizeProduct('orange', 'Апельсин', 'Фрукты', 43, 0.9, 0.2, 8.1, { small: 130, medium: 180, large: 240 });
+    addSizeProduct('mandarin', 'Мандарин', 'Фрукты', 38, 0.8, 0.2, 7.5, { small: 70, medium: 90, large: 120 });
+    addSizeProduct('kiwi', 'Киви', 'Фрукты', 61, 1.1, 0.5, 14.7, { small: 60, medium: 80, large: 100 });
+    addSizeProduct('grapefruit', 'Грейпфрут', 'Фрукты', 35, 0.7, 0.2, 6.5, { small: 180, medium: 240, large: 320 });
+    addSizeProduct('peach', 'Персик', 'Фрукты', 39, 0.9, 0.3, 9.5, { small: 100, medium: 140, large: 180 });
+    addSizeProduct('nectarine', 'Нектарин', 'Фрукты', 44, 1.1, 0.3, 10.6, { small: 110, medium: 150, large: 190 });
+    addSizeProduct('plum', 'Слива', 'Фрукты', 46, 0.7, 0.3, 11.4, { small: 35, medium: 50, large: 70 });
+    addSizeProduct('apricot', 'Абрикос', 'Фрукты', 48, 1.4, 0.4, 11.1, { small: 35, medium: 45, large: 60 });
+    addSizeProduct('mango', 'Манго', 'Фрукты', 60, 0.8, 0.4, 15, { small: 180, medium: 250, large: 330 });
+    addSizeProduct('avocado', 'Авокадо', 'Фрукты', 160, 2, 14.7, 8.5, { small: 120, medium: 170, large: 220 });
+    addProduct('grapes', 'Виноград', 'Фрукты', 72, 0.6, 0.2, 18);
+    addProduct('strawberry', 'Клубника', 'Ягоды', 32, 0.7, 0.3, 7.7);
+    addProduct('blueberry', 'Голубика', 'Ягоды', 57, 0.7, 0.3, 14.5);
+    addProduct('raspberry', 'Малина', 'Ягоды', 52, 1.2, 0.7, 11.9);
+    addProduct('berries-mix', 'Ягоды микс', 'Ягоды', 50, 1, 0.4, 10.5);
+
+    // Овощи.
+    addSizeProduct('tomato', 'Помидор', 'Овощи', 18, 0.9, 0.2, 3.9, { small: 80, medium: 120, large: 180 });
+    addSizeProduct('cucumber', 'Огурец', 'Овощи', 15, 0.8, 0.1, 2.8, { small: 90, medium: 150, large: 220 });
+    addSizeProduct('carrot', 'Морковь', 'Овощи', 35, 1.3, 0.1, 6.9, { small: 50, medium: 80, large: 120 });
+    addSizeProduct('bell-pepper', 'Болгарский перец', 'Овощи', 27, 1.3, 0.1, 5.3, { small: 90, medium: 130, large: 180 });
+    addSizeProduct('zucchini', 'Кабачок', 'Овощи', 24, 0.6, 0.3, 4.6, { small: 180, medium: 260, large: 360 });
+    addSizeProduct('eggplant', 'Баклажан', 'Овощи', 24, 1.2, 0.1, 5.7, { small: 180, medium: 260, large: 340 });
+    addSizeProduct('onion', 'Лук', 'Овощи', 41, 1.4, 0.2, 9.3, { small: 60, medium: 90, large: 130 });
+    addProduct('broccoli', 'Брокколи', 'Овощи', 34, 2.8, 0.4, 6.6);
+    addProduct('cauliflower', 'Цветная капуста', 'Овощи', 30, 2.5, 0.3, 5.4);
+    addProduct('cabbage', 'Капуста белокочанная', 'Овощи', 27, 1.8, 0.1, 4.7);
+    addProduct('lettuce', 'Листья салата', 'Овощи', 15, 1.4, 0.2, 2.9);
+    addProduct('spinach', 'Шпинат', 'Овощи', 23, 2.9, 0.4, 3.6);
+    addProduct('beet', 'Свёкла', 'Овощи', 43, 1.6, 0.2, 10);
+    addProduct('boiled-potatoes', 'Картофель варёный', 'Гарнир', 82, 2, 0.4, 17.5);
+    addProduct('baked-potatoes', 'Картофель запечённый', 'Гарнир', 93, 2.5, 0.1, 21);
+    addProduct('mashed-potatoes', 'Пюре картофельное', 'Гарнир', 106, 2.3, 4.2, 15);
+    addProduct('french-fries', 'Картофель фри', 'Гарнир', 312, 3.4, 15, 41);
+
+    // Орехи и семена.
+    addProduct('almonds', 'Миндаль', 'Орехи', 579, 21.2, 49.9, 21.6);
+    addProduct('walnuts', 'Грецкие орехи', 'Орехи', 654, 15.2, 65.2, 13.7);
+    addProduct('cashew', 'Кешью', 'Орехи', 553, 18.2, 43.8, 30.2);
+    addProduct('hazelnut', 'Фундук', 'Орехи', 628, 15, 60.8, 16.7);
+    addProduct('peanut', 'Арахис', 'Орехи', 567, 25.8, 49.2, 16.1);
+    addProduct('chia', 'Семена чиа', 'Семена', 486, 16.5, 30.7, 42.1);
+    addProduct('flax-seeds', 'Семена льна', 'Семена', 534, 18.3, 42.2, 28.9);
+
+    // Хлеб, выпечка, мучное.
+    addProduct('wholegrain-bread', 'Цельнозерновой хлеб', 'Выпечка', 247, 8.5, 3.3, 41);
+    addProduct('rye-bread', 'Ржаной хлеб', 'Выпечка', 210, 6.6, 1.2, 42.7);
+    addProduct('white-bread', 'Белый хлеб', 'Выпечка', 266, 8.6, 3.2, 49.6);
+    addProduct('toast-bread', 'Тостовый хлеб', 'Выпечка', 285, 8, 4.4, 53);
+    addProduct('baguette', 'Багет', 'Выпечка', 272, 8.4, 1.7, 56.4);
+    addProduct('lavash', 'Лаваш', 'Выпечка', 275, 9.1, 1.2, 55.7);
+    addProduct('tortilla', 'Тортилья', 'Выпечка', 310, 8.2, 7.8, 50.4);
+    addProduct('croissant', 'Круассан', 'Выпечка', 406, 8.2, 21, 45.8);
+    addProduct('crackers', 'Крекеры', 'Перекус', 430, 9.5, 12, 71);
+    addProduct('saltine-crackers', 'Солёные крекеры', 'Перекус', 421, 9.8, 10.6, 73);
+    addProduct('breadsticks', 'Хлебные палочки', 'Перекус', 412, 11.5, 9.5, 68);
+    addProduct('galette-biscuits', 'Галетное печенье', 'Перекус', 379, 9.4, 9.1, 68.6);
+    addProduct('rusks', 'Сухарики', 'Перекус', 335, 11, 1.3, 72);
+    addProduct('rice-cakes', 'Рисовые хлебцы', 'Перекус', 387, 8, 3.4, 81.5);
+    addProduct('buckwheat-crispbread', 'Гречневые хлебцы', 'Перекус', 320, 10, 2.5, 64);
+    addProduct('bagel', 'Бублик', 'Выпечка', 275, 9, 1.7, 55.5);
+
+    // Мясо и птица.
+    addProduct('chicken-breast', 'Куриная грудка запечённая', 'Мясо', 165, 31, 3.6, 0);
+    addProduct('chicken-thigh', 'Куриное бедро запечённое', 'Мясо', 209, 26, 10.9, 0);
+    addProduct('turkey-fillet', 'Индейка филе', 'Мясо', 135, 29, 1.7, 0);
+    addProduct('beef-lean', 'Говядина постная', 'Мясо', 187, 18.9, 12.4, 0);
+    addProduct('beef-steak', 'Стейк говяжий', 'Мясо', 217, 27.3, 11.8, 0);
+    addProduct('veal', 'Телятина', 'Мясо', 172, 20.4, 9.4, 0);
+    addProduct('pork-loin', 'Свинина корейка', 'Мясо', 242, 27, 14, 0);
+    addProduct('pork-cutlet', 'Свинина запечённая', 'Мясо', 259, 24, 18, 0);
+    addProduct('rabbit', 'Крольчатина', 'Мясо', 173, 21.2, 10.8, 0);
+    addProduct('chicken-liver', 'Печень куриная', 'Субпродукты', 136, 19.1, 6.3, 0.6);
+    addProduct('beef-liver', 'Печень говяжья', 'Субпродукты', 135, 20.4, 3.6, 3.9);
+    addProduct('ham', 'Ветчина', 'Мясо', 145, 20.9, 6.1, 1.5);
+    addProduct('sausage-doctor', 'Колбаса докторская', 'Колбасы', 257, 12.8, 22.2, 1.5);
+    addProduct('salami', 'Салями', 'Колбасы', 407, 22, 34, 1.6);
+
+    // Рыба и морепродукты.
+    addProduct('salmon-baked', 'Лосось запечённый', 'Рыба', 208, 20, 13, 0);
+    addProduct('trout-baked', 'Форель запечённая', 'Рыба', 190, 21, 11, 0);
+    addProduct('tuna-water', 'Тунец в собственном соку', 'Рыба', 116, 25.5, 0.8, 0);
+    addProduct('cod', 'Треска', 'Рыба', 82, 17.8, 0.7, 0);
+    addProduct('pollock', 'Минтай', 'Рыба', 72, 15.9, 0.9, 0);
+    addProduct('hake', 'Хек', 'Рыба', 86, 16.6, 2.2, 0);
+    addProduct('mackerel', 'Скумбрия', 'Рыба', 205, 18.6, 13.9, 0);
+    addProduct('herring', 'Сельдь', 'Рыба', 217, 19.8, 15.4, 0);
+    addProduct('sardine', 'Сардина', 'Рыба', 208, 24.6, 11.5, 0);
+    addProduct('shrimp', 'Креветки варёные', 'Морепродукты', 99, 24, 0.3, 0.2);
+    addProduct('squid', 'Кальмар', 'Морепродукты', 92, 18, 2.2, 0);
+    addProduct('mussels', 'Мидии', 'Морепродукты', 86, 12, 2.2, 3.7);
+    addProduct('octopus', 'Осьминог', 'Морепродукты', 82, 14.9, 1, 2.2);
+    addProduct('crab-meat', 'Крабовое мясо', 'Морепродукты', 97, 19, 1.5, 0);
+
+    // Гарниры, крупы, бобовые.
+    addProduct('rice-cooked', 'Рис варёный', 'Гарнир', 116, 2.4, 0.4, 24.9);
+    addProduct('brown-rice', 'Рис бурый варёный', 'Гарнир', 111, 2.6, 0.9, 23);
+    addProduct('buckwheat-cooked', 'Гречка варёная', 'Гарнир', 110, 4.2, 1.1, 21.3);
+    addProduct('bulgur-cooked', 'Булгур варёный', 'Гарнир', 83, 3.1, 0.2, 18.6);
+    addProduct('couscous-cooked', 'Кускус варёный', 'Гарнир', 112, 3.8, 0.2, 23.2);
+    addProduct('quinoa-cooked', 'Киноа варёная', 'Гарнир', 120, 4.4, 1.9, 21.3);
+    addProduct('pearl-barley', 'Перловка варёная', 'Гарнир', 109, 3.1, 0.4, 22.8);
+    addProduct('lentils-cooked', 'Чечевица варёная', 'Бобовые', 116, 9, 0.4, 20);
+    addProduct('beans-cooked', 'Фасоль варёная', 'Бобовые', 123, 8.7, 0.5, 21.4);
+    addProduct('chickpeas-cooked', 'Нут варёный', 'Бобовые', 164, 8.9, 2.6, 27.4);
+    addProduct('green-peas', 'Горох зелёный', 'Бобовые', 81, 5.4, 0.4, 14.5);
+
+    // Макароны и лапша.
+    addProduct('spaghetti', 'Спагетти варёные', 'Макароны', 158, 5.8, 0.9, 30.9);
+    addProduct('penne', 'Пенне варёные', 'Макароны', 157, 5.8, 0.9, 30.6);
+    addProduct('fusilli', 'Фузилли варёные', 'Макароны', 156, 5.7, 0.9, 30.5);
+    addProduct('farfalle', 'Фарфалле варёные', 'Макароны', 160, 5.9, 1, 31);
+    addProduct('tagliatelle', 'Тальятелле варёные', 'Макароны', 159, 6, 1, 30.8);
+    addProduct('macaroni', 'Макароны варёные', 'Макароны', 131, 5, 1.1, 25);
+    addProduct('vermicelli', 'Вермишель варёная', 'Макароны', 134, 4.7, 0.9, 26.2);
+    addProduct('udon', 'Удон варёный', 'Лапша', 127, 3, 0.2, 25.3);
+    addProduct('soba', 'Соба варёная', 'Лапша', 99, 5.1, 0.1, 21.4);
+    addProduct('ramen', 'Рамен варёный', 'Лапша', 138, 4.5, 2.1, 25.2);
+
+    // Салаты, супы.
+    addProduct('vegetable-salad', 'Овощной салат', 'Салат', 58, 1.5, 3.2, 6.2);
+    addProduct('greek-salad', 'Греческий салат', 'Салат', 126, 3.6, 10, 5);
+    addProduct('caesar-salad', 'Салат Цезарь', 'Салат', 180, 10, 12, 7);
+    addProduct('olivier', 'Салат Оливье', 'Салат', 198, 5.3, 16.5, 7.8);
+    addMlProduct('borscht', 'Борщ', 'Суп', 49, 1.9, 2.3, 5.9);
+    addMlProduct('chicken-soup', 'Куриный суп', 'Суп', 43, 3.2, 1.8, 3.5);
+    addMlProduct('lentil-soup', 'Чечевичный суп', 'Суп', 68, 4.2, 2.1, 8.9);
+    addMlProduct('mushroom-soup', 'Грибной суп', 'Суп', 38, 1.8, 2.1, 3.6);
+    addMlProduct('pumpkin-soup', 'Тыквенный суп-пюре', 'Суп', 56, 1.4, 2.8, 6.5);
+    addMlProduct('solyanka', 'Солянка', 'Суп', 72, 3.5, 5.3, 2.8);
+
+    // Готовые блюда.
+    addProduct('pilaf-chicken', 'Плов с курицей', 'Блюдо', 168, 8.4, 6.8, 18.5);
+    addProduct('pilaf-beef', 'Плов с говядиной', 'Блюдо', 191, 8.8, 8.7, 19.8);
+    addProduct('buckwheat-chicken', 'Гречка с курицей', 'Блюдо', 145, 10.5, 4.2, 16);
+    addProduct('rice-chicken', 'Рис с курицей', 'Блюдо', 154, 10.8, 4.1, 18.4);
+    addProduct('steam-cutlets', 'Куриные котлеты на пару', 'Блюдо', 150, 18, 8, 3);
+    addProduct('beef-stroganoff', 'Бефстроганов', 'Блюдо', 193, 16, 12, 4.5);
+    addProduct('meatballs-rice', 'Тефтели с рисом', 'Блюдо', 180, 9.5, 9.1, 14.7);
+    addProduct('lasagna', 'Лазанья', 'Блюдо', 170, 9, 10, 12);
+    addProduct('pasta-bolognese', 'Паста Болоньезе', 'Блюдо', 163, 8.1, 5.9, 19.6);
+    addProduct('pasta-carbonara', 'Паста Карбонара', 'Блюдо', 195, 7.8, 9.4, 19.5);
+    addProduct('pizza-margherita', 'Пицца Маргарита', 'Блюдо', 266, 11, 10, 33);
+    addProduct('pizza-pepperoni', 'Пицца Пепперони', 'Блюдо', 298, 13, 13, 32);
+    addProduct('pelmeni', 'Пельмени варёные', 'Блюдо', 275, 13, 12, 26);
+    addProduct('vareniki-potato', 'Вареники с картошкой', 'Блюдо', 185, 4.4, 3.5, 33);
+    addProduct('shawarma', 'Шаурма', 'Блюдо', 250, 12, 12, 25);
+    addProduct('burger', 'Бургер', 'Блюдо', 295, 13, 14, 28);
+    addProduct('philadelphia-roll', 'Ролл Филадельфия', 'Блюдо', 142, 6.8, 6.2, 14.8);
+    addProduct('california-roll', 'Ролл Калифорния', 'Блюдо', 176, 5.8, 6.4, 24.1);
+    addProduct('fried-rice-chicken', 'Жареный рис с курицей', 'Блюдо', 185, 8.9, 6.3, 22.4);
+    addProduct('risotto', 'Ризотто', 'Блюдо', 151, 4.2, 5.8, 20.6);
+
+    // Десерты, напитки, соусы.
+    addProduct('dark-chocolate', 'Тёмный шоколад', 'Десерт', 546, 4.9, 31, 61);
+    addProduct('milk-chocolate', 'Молочный шоколад', 'Десерт', 535, 7.6, 29.7, 59.4);
+    addProduct('protein-bar', 'Протеиновый батончик', 'Перекус', 360, 25, 12, 35);
+    addProduct('cereal-bar', 'Злаковый батончик', 'Перекус', 380, 6, 11, 63);
+    addProduct('glazed-curd', 'Сырок глазированный', 'Десерт', 407, 8.5, 25, 32);
+    addProduct('popcorn', 'Попкорн', 'Перекус', 387, 12, 4.5, 78);
+    addProduct('chips', 'Чипсы', 'Перекус', 536, 7, 35, 49);
+    addProduct('pretzels', 'Соломка солёная', 'Перекус', 380, 10, 4, 76);
+    addProduct('ice-cream', 'Мороженое ванильное', 'Десерт', 207, 3.5, 11, 24);
+    addProduct('cheesecake', 'Чизкейк', 'Десерт', 321, 5.5, 22.5, 24.8);
+    addProduct('tiramisu', 'Тирамису', 'Десерт', 300, 4.3, 20, 25);
+    addProduct('oat-cookie', 'Овсяное печенье', 'Десерт', 437, 6.5, 14.4, 71.8);
+    addProduct('honey', 'Мёд', 'Десерт', 304, 0.3, 0, 82.4);
+    addProduct('jam', 'Варенье', 'Десерт', 250, 0.4, 0.1, 63);
+    addMlProduct('latte', 'Латте', 'Напиток', 58, 3.2, 2.7, 4.8);
+    addMlProduct('cappuccino', 'Капучино', 'Напиток', 45, 3, 2, 4);
+    addMlProduct('espresso', 'Эспрессо', 'Напиток', 9, 0.1, 0.2, 1.7);
+    addMlProduct('orange-juice', 'Апельсиновый сок', 'Напиток', 45, 0.7, 0.2, 10.4);
+    addMlProduct('apple-juice', 'Яблочный сок', 'Напиток', 46, 0.1, 0.1, 11.3);
+    addMlProduct('cola', 'Кола', 'Напиток', 42, 0, 0, 10.6);
+    addMlProduct('tea-sugar', 'Чай с сахаром', 'Напиток', 26, 0, 0, 6.5);
+    addProduct('ketchup', 'Кетчуп', 'Соус', 112, 1.3, 0.2, 25.8);
+    addProduct('mayonnaise', 'Майонез', 'Соус', 627, 2.4, 67, 3.9);
+    addProduct('soy-sauce', 'Соевый соус', 'Соус', 53, 8.1, 0.6, 4.9);
+    addProduct('olive-oil', 'Оливковое масло', 'Масло', 884, 0, 100, 0);
+    addProduct('sunflower-oil', 'Подсолнечное масло', 'Масло', 899, 0, 99.9, 0);
+    addProduct('peanut-butter', 'Арахисовая паста', 'Намазка', 588, 25, 50, 20);
+    addProduct('cream-cheese', 'Сливочный сыр', 'Намазка', 342, 6.2, 34, 4.1);
+    addProduct('nutella', 'Шоколадная паста', 'Намазка', 539, 6.3, 30.9, 57.5);
+    addProduct('toast-butter', 'Тост с маслом', 'Бутерброд', 338, 7.1, 12.6, 48.2);
+    addProduct('sandwich-cheese', 'Бутерброд с сыром', 'Бутерброд', 290, 11.5, 12.2, 32);
+    addProduct('sandwich-ham-cheese', 'Бутерброд с ветчиной и сыром', 'Бутерброд', 265, 13.2, 11.8, 26.8);
+    addProduct('sandwich-butter-cheese', 'Бутерброд с маслом и сыром', 'Бутерброд', 318, 10.3, 16.2, 31.4);
+    addProduct('sandwich-red-fish', 'Бутерброд с красной рыбой', 'Бутерброд', 231, 12.5, 9.3, 23.4);
+    addProduct('sandwich-avocado', 'Тост с авокадо', 'Бутерброд', 215, 5.4, 9.8, 25.6);
+
+    const MEALS = [
+      {
+        key: 'morning',
+        title: 'Утро',
+        subtitle: 'Завтрак и первое питание',
+        picks: ['Овсянка на молоке', 'Омлет', 'Творог 5%', 'Банан']
+      },
+      {
+        key: 'snack1',
+        title: 'Перекус 1',
+        subtitle: 'Небольшой приём пищи между утром и обедом',
+        picks: ['Яблоко', 'Греческий йогурт', 'Кукурузные хлопья', 'Крекеры']
+      },
+      {
+        key: 'lunch',
+        title: 'Обед',
+        subtitle: 'Основной приём пищи днём',
+        picks: ['Куриная грудка запечённая', 'Рис варёный', 'Борщ', 'Спагетти варёные']
+      },
+      {
+        key: 'snack2',
+        title: 'Перекус 2',
+        subtitle: 'Лёгкий приём пищи после обеда',
+        picks: ['Бутерброд с сыром', 'Рисовые хлебцы', 'Арахисовая паста', 'Апельсин']
+      },
+      {
+        key: 'dinner',
+        title: 'Ужин',
+        subtitle: 'Вечерний приём пищи',
+        picks: ['Лосось запечённый', 'Овощной салат', 'Креветки варёные', 'Индейка филе']
+      }
+    ];
+
+    const DEFAULT_GOALS = {
+      calories: 2000,
+      protein: 120,
+      fat: 70,
+      carbs: 230,
+      water: 2500
+    };
+
+    const STORAGE_KEYS = {
+      items: 'belove_items_v6',
+      goals: 'belove_goals_v6',
+      profile: 'belove_profile_v6',
+      water: 'belove_water_v6'
+    };
+
+    const ACTIVITY_FACTORS = {
+      light: 1.375,
+      moderate: 1.55,
+      active: 1.725,
+      very: 1.9
+    };
+
+    const ACTIVITY_LABELS = {
+      light: 'Лёгкая',
+      moderate: 'Средняя',
+      active: 'Высокая',
+      very: 'Очень высокая'
+    };
+
+    const GOAL_LABELS = {
+      maintain: 'Поддержание',
+      lose: 'Снижение веса',
+      gain: 'Набор массы'
+    };
+
+    const state = {
+      items: [],
+      waterEntries: [],
+      goals: { ...DEFAULT_GOALS },
+      profile: null,
+      search: {},
+      logFilter: 'all',
+      accountPromptShown: false
+    };
+
+    const currentDate = document.getElementById('currentDate');
+    const helloName = document.getElementById('helloName');
+    const heroText = document.getElementById('heroText');
+    const clearDayBtn = document.getElementById('clearDayBtn');
+    const editProfileBtn = document.getElementById('editProfileBtn');
+    const recalculateBtn = document.getElementById('recalculateBtn');
+    const mealQuickLinks = document.getElementById('mealQuickLinks');
+    const mealSections = document.getElementById('mealSections');
+    const toast = document.getElementById('toast');
+
+    const goalsForm = document.getElementById('goalsForm');
+    const resetGoalsBtn = document.getElementById('resetGoalsBtn');
+    const goalInputs = {
+      calories: document.getElementById('goalCalories'),
+      protein: document.getElementById('goalProtein'),
+      fat: document.getElementById('goalFat'),
+      carbs: document.getElementById('goalCarbs'),
+      water: document.getElementById('goalWater')
+    };
+
+    const summaryElements = {
+      dayCalories: document.getElementById('dayCalories'),
+      dayProtein: document.getElementById('dayProtein'),
+      dayFat: document.getElementById('dayFat'),
+      dayCarbs: document.getElementById('dayCarbs'),
+      dayWater: document.getElementById('dayWater'),
+      dayEntries: document.getElementById('dayEntries'),
+      goalLabelCalories: document.getElementById('goalLabelCalories'),
+      goalLabelProtein: document.getElementById('goalLabelProtein'),
+      goalLabelFat: document.getElementById('goalLabelFat'),
+      goalLabelCarbs: document.getElementById('goalLabelCarbs'),
+      goalLabelWater: document.getElementById('goalLabelWater'),
+      progressCalories: document.getElementById('progressCalories'),
+      progressProtein: document.getElementById('progressProtein'),
+      progressFat: document.getElementById('progressFat'),
+      progressCarbs: document.getElementById('progressCarbs'),
+      progressWater: document.getElementById('progressWater')
+    };
+
+    const profileElements = {
+      profileNameValue: document.getElementById('profileNameValue'),
+      profileBodyValue: document.getElementById('profileBodyValue'),
+      profileActivityValue: document.getElementById('profileActivityValue'),
+      profileGoalValue: document.getElementById('profileGoalValue'),
+      profileCornerBody: document.getElementById('profileCornerBody'),
+      profileCornerGoal: document.getElementById('profileCornerGoal'),
+      formulaSummary: document.getElementById('formulaSummary')
+    };
+
+    const waterElements = {
+      waterHeadline: document.getElementById('waterHeadline'),
+      waterGoalInline: document.getElementById('waterGoalInline'),
+      progressWaterInline: document.getElementById('progressWaterInline'),
+      waterAmountInput: document.getElementById('waterAmountInput'),
+      addWaterBtn: document.getElementById('addWaterBtn'),
+      waterError: document.getElementById('waterError'),
+      waterList: document.getElementById('waterList'),
+      waterEntriesCount: document.getElementById('waterEntriesCount')
+    };
+
+    const logElements = {
+      logCount: document.getElementById('logCount'),
+      dailyLogList: document.getElementById('dailyLogList'),
+      weeklyHistory: document.getElementById('weeklyHistory'),
+      historyFilters: document.getElementById('historyFilters')
+    };
+
+    const modalElements = {
+      modal: document.getElementById('profileModal'),
+      form: document.getElementById('profileForm'),
+      closeBtn: document.getElementById('closeProfileBtn'),
+      resetBtn: document.getElementById('profileResetBtn'),
+      error: document.getElementById('profileError'),
+      name: document.getElementById('profileName'),
+      age: document.getElementById('profileAge'),
+      height: document.getElementById('profileHeight'),
+      weight: document.getElementById('profileWeight')
+    };
+
+    const accountPromptElements = {
+      modal: document.getElementById('accountPromptModal'),
+      openBtn: document.getElementById('openAccountPromptBtn'),
+      closeBtn: document.getElementById('closeAccountPromptBtn')
+    };
+
+    function initSearchState() {
+      MEALS.forEach((meal) => {
+        state.search[meal.key] = {
+          results: [],
+          activeIndex: -1
+        };
+      });
+    }
+
+    function getId() {
+      return `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+    }
+
+    function roundOne(value) {
+      return Math.round((Number(value) || 0) * 10) / 10;
+    }
+
+    function roundTo(value, step) {
+      return Math.round((Number(value) || 0) / step) * step;
+    }
+
+    function formatNumber(value) {
+      const number = Number(value) || 0;
+      const fixed = Math.abs(number % 1) < 0.001 ? number.toFixed(0) : number.toFixed(1);
+      return fixed.replace('.', ',');
+    }
+
+    function formatTime(dateLike) {
+      return new Intl.DateTimeFormat('ru-RU', {
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(new Date(dateLike));
+    }
+
+    function formatWeekLabel(dateLike) {
+      return new Intl.DateTimeFormat('ru-RU', {
+        weekday: 'short',
+        day: 'numeric'
+      }).format(new Date(dateLike));
+    }
+
+    function isSameDay(dateA, dateB) {
+      const a = new Date(dateA);
+      const b = new Date(dateB);
+      return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+    }
+
+    function getDateKey(dateLike) {
+      const date = new Date(dateLike);
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${date.getFullYear()}-${month}-${day}`;
+    }
+
+    function setupRevealAnimations() {
+      const blocks = Array.from(document.querySelectorAll('.reveal-block, .meal-section'));
+      if (!blocks.length) return;
+
+      blocks.forEach((block, index) => {
+        block.classList.add('reveal-block');
+        block.style.setProperty('--reveal-delay', `${Math.min(index * 45, 240)}ms`);
+      });
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, {
+        threshold: 0.14,
+        rootMargin: '0px 0px -6% 0px'
+      });
+
+      blocks.forEach((block) => observer.observe(block));
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add('show');
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2200);
+    }
+
+    function saveItems() {
+      localStorage.setItem(STORAGE_KEYS.items, JSON.stringify(state.items));
+    }
+
+    function saveGoals() {
+      localStorage.setItem(STORAGE_KEYS.goals, JSON.stringify(state.goals));
+    }
+
+    function saveProfile() {
+      localStorage.setItem(STORAGE_KEYS.profile, JSON.stringify(state.profile));
+    }
+
+    function saveWater() {
+      localStorage.setItem(STORAGE_KEYS.water, JSON.stringify(state.waterEntries));
+    }
+
+    function parseStoredArray(key) {
+      try {
+        const value = JSON.parse(localStorage.getItem(key) || '[]');
+        return Array.isArray(value) ? value : [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function loadState() {
+      initSearchState();
+
+      state.items = parseStoredArray(STORAGE_KEYS.items).filter((item) => item && typeof item === 'object');
+      state.waterEntries = parseStoredArray(STORAGE_KEYS.water).filter((item) => item && typeof item === 'object');
+
+      try {
+        const storedProfile = JSON.parse(localStorage.getItem(STORAGE_KEYS.profile) || 'null');
+        if (storedProfile && typeof storedProfile === 'object') {
+          state.profile = storedProfile;
+        }
+      } catch (error) {
+        state.profile = null;
+      }
+
+      try {
+        const storedGoals = JSON.parse(localStorage.getItem(STORAGE_KEYS.goals) || '{}');
+        state.goals = {
+          calories: Math.max(1, Number(storedGoals.calories) || DEFAULT_GOALS.calories),
+          protein: Math.max(1, Number(storedGoals.protein) || DEFAULT_GOALS.protein),
+          fat: Math.max(1, Number(storedGoals.fat) || DEFAULT_GOALS.fat),
+          carbs: Math.max(1, Number(storedGoals.carbs) || DEFAULT_GOALS.carbs),
+          water: Math.max(100, Number(storedGoals.water) || DEFAULT_GOALS.water)
+        };
+      } catch (error) {
+        state.goals = { ...DEFAULT_GOALS };
+      }
+
+      if (state.profile && !localStorage.getItem(STORAGE_KEYS.goals)) {
+        state.goals = calculateGoalsFromProfile(state.profile).goals;
+        saveGoals();
+      }
+    }
+
+    function syncGoalInputs() {
+      goalInputs.calories.value = state.goals.calories;
+      goalInputs.protein.value = state.goals.protein;
+      goalInputs.fat.value = state.goals.fat;
+      goalInputs.carbs.value = state.goals.carbs;
+      goalInputs.water.value = state.goals.water;
+    }
+
+    function setCurrentDate() {
+      currentDate.textContent = new Intl.DateTimeFormat('ru-RU', {
+        day: 'numeric',
+        month: 'long',
+        weekday: 'long'
+      }).format(new Date());
+    }
+
+    function getProfileSelection(group) {
+      const active = modalElements.form.querySelector(`.choice-btn[data-group='${group}'].active`);
+      return active?.dataset?.value || '';
+    }
+
+    function setChoiceValue(group, value) {
+      modalElements.form.querySelectorAll(`.choice-btn[data-group='${group}']`).forEach((button) => {
+        button.classList.toggle('active', button.dataset.value === value);
+      });
+    }
+
+    function getProductById(id) {
+      return PRODUCT_DATABASE.find((item) => item.id === id) || null;
+    }
+
+    function getProductByName(name) {
+      const normalized = String(name || '').trim().toLowerCase();
+      return PRODUCT_DATABASE.find((item) => item.name.toLowerCase() === normalized) || null;
+    }
+
+    function getMatches(query) {
+      const normalized = String(query || '').trim().toLowerCase();
+      const sorted = PRODUCT_DATABASE.slice().sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+
+      if (!normalized) {
+        return sorted.slice(0, 12);
+      }
+
+      return sorted
+        .filter((item) => `${item.name} ${item.category}`.toLowerCase().includes(normalized))
+        .sort((a, b) => {
+          const aStart = a.name.toLowerCase().startsWith(normalized) ? 0 : 1;
+          const bStart = b.name.toLowerCase().startsWith(normalized) ? 0 : 1;
+          if (aStart !== bStart) return aStart - bStart;
+          return a.name.localeCompare(b.name, 'ru');
+        })
+        .slice(0, 12);
+    }
+
+    function isSizeModeProduct(product) {
+      return Boolean(product && product.amountMode === 'size' && product.sizes);
+    }
+
+    function getSelectedSize(form) {
+      return form?.dataset?.selectedSize || 'medium';
+    }
+
+    function getSizeLabel(sizeKey) {
+      if (sizeKey === 'small') return 'маленький';
+      if (sizeKey === 'large') return 'большой';
+      return 'средний';
+    }
+
+    function getWeightForProductInput(product, options = {}) {
+      if (!product) return 0;
+
+      if (isSizeModeProduct(product)) {
+        const sizeKey = options.size || 'medium';
+        return Math.max(1, Number(product.sizes?.[sizeKey]) || Number(product.sizes?.medium) || 0);
+      }
+
+      const rawAmount = Number(options.amount);
+      if (!Number.isFinite(rawAmount) || rawAmount <= 0) return 0;
+      return rawAmount;
+    }
+
+    function calculateForAmount(product, amount) {
+      const safeAmount = Math.max(0, Number(amount) || 0);
+      if (!safeAmount) {
+        return { calories: 0, protein: 0, fat: 0, carbs: 0 };
+      }
+      const ratio = safeAmount / 100;
+      return {
+        calories: roundOne(product.calories * ratio),
+        protein: roundOne(product.protein * ratio),
+        fat: roundOne(product.fat * ratio),
+        carbs: roundOne(product.carbs * ratio)
+      };
+    }
+
+    function calculateForInput(product, options = {}) {
+      const amount = getWeightForProductInput(product, options);
+      const values = calculateForAmount(product, amount);
+      return {
+        ...values,
+        amount,
+        size: isSizeModeProduct(product) ? (options.size || 'medium') : null
+      };
+    }
+
+    function calculateTotals(list) {
+      return list.reduce((acc, item) => {
+        acc.calories += Number(item.calories) || 0;
+        acc.protein += Number(item.protein) || 0;
+        acc.fat += Number(item.fat) || 0;
+        acc.carbs += Number(item.carbs) || 0;
+        return acc;
+      }, { calories: 0, protein: 0, fat: 0, carbs: 0 });
+    }
+
+    function getWaterTotal() {
+      return state.waterEntries.reduce((sum, entry) => sum + (Number(entry.amount) || 0), 0);
+    }
+
+    function getMealItems(mealKey) {
+      return state.items.filter((item) => item.meal === mealKey);
+    }
+
+    function createMacroBadge(label, value, suffix = 'г') {
+      return `<span class='macro-badge'>${label}: ${formatNumber(value)} ${suffix}</span>`;
+    }
+
+    function calculateGoalsFromProfile(profile) {
+      const weight = Number(profile.weight) || 0;
+      const height = Number(profile.height) || 0;
+      const age = Number(profile.age) || 0;
+      const sexOffset = profile.sex === 'male' ? 5 : -161;
+      const bmr = (10 * weight) + (6.25 * height) - (5 * age) + sexOffset;
+      const activityFactor = ACTIVITY_FACTORS[profile.activity] || ACTIVITY_FACTORS.light;
+      const tdee = bmr * activityFactor;
+
+      let calories = tdee;
+      if (profile.goalMode === 'lose') calories = tdee * 0.85;
+      if (profile.goalMode === 'gain') calories = tdee * 1.1;
+
+      const proteinFactor = profile.goalMode === 'lose' ? 1.8 : profile.goalMode === 'gain' ? 1.8 : 1.6;
+      const fatFactor = profile.goalMode === 'gain' ? 1 : 0.9;
+
+      const protein = roundTo(weight * proteinFactor, 5);
+      const fat = roundTo(weight * fatFactor, 5);
+      const roundedCalories = roundTo(calories, 50);
+      const carbs = roundTo(Math.max(50, (roundedCalories - (protein * 4) - (fat * 9)) / 4), 5);
+
+      let water = weight * 35;
+      if (profile.activity === 'moderate') water += 150;
+      if (profile.activity === 'active') water += 350;
+      if (profile.activity === 'very') water += 600;
+
+      return {
+        bmr: roundTo(bmr, 10),
+        tdee: roundTo(tdee, 10),
+        goals: {
+          calories: Math.max(1200, roundedCalories),
+          protein: Math.max(40, protein),
+          fat: Math.max(30, fat),
+          carbs: Math.max(50, carbs),
+          water: Math.max(1500, roundTo(water, 50))
+        }
+      };
+    }
+
+    function createMealSections() {
+      mealSections.innerHTML = MEALS.map((meal) => {
+        const quickButtons = meal.picks.map((name) => `
+          <button type='button' class='quick-pick' data-action='quick-pick' data-product-name='${escapeHtml(name)}'>
+            ${escapeHtml(name)}
+          </button>
+        `).join('');
+
+        return `
+          <section id='meal-${meal.key}' class='meal-section section-card p-5 sm:p-6' data-meal-key='${meal.key}'>
+            <div class='flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between'>
+              <div>
+                <p class='text-xs uppercase tracking-[0.2em] text-[var(--muted)]'>Приём пищи</p>
+                <h2 class='meal-title mt-2'>${meal.title}</h2>
+                <p class='mt-2 text-sm text-[var(--muted)]'>${meal.subtitle}</p>
+              </div>
+              <div class='meal-subgrid w-full lg:max-w-[560px]'>
+                <div class='meal-stat'>
+                  <div class='meal-stat-label'>Калории</div>
+                  <div class='meal-stat-value' data-total='calories'>0 ккал</div>
+                </div>
+                <div class='meal-stat'>
+                  <div class='meal-stat-label'>Белки</div>
+                  <div class='meal-stat-value' data-total='protein'>0 г</div>
+                </div>
+                <div class='meal-stat'>
+                  <div class='meal-stat-label'>Жиры</div>
+                  <div class='meal-stat-value' data-total='fat'>0 г</div>
+                </div>
+                <div class='meal-stat'>
+                  <div class='meal-stat-label'>Углеводы</div>
+                  <div class='meal-stat-value' data-total='carbs'>0 г</div>
+                </div>
+              </div>
+            </div>
+
+            <div class='mt-5 grid gap-4 xl:grid-cols-[0.95fr_1.05fr]'>
+              <form class='meal-form soft-card p-4' data-meal-key='${meal.key}' novalidate>
+                <div>
+                  <label class='input-label'>Блюдо или продукт</label>
+                  <div class='search-wrap'>
+                    <input
+                      type='text'
+                      class='input-field product-search'
+                      placeholder='Например: креветки, пенне, борщ, яблоко'
+                      autocomplete='off'
+                      data-allow-select='true'
+                    />
+                    <div class='search-dropdown hidden'>
+                      <div class='search-results'></div>
+                    </div>
+                  </div>
+                  <p class='note-line selection-note mt-2'>Выбери продукт из базы — Belove сам посчитает калории и БЖУ.</p>
+                </div>
+
+                <div class='mt-4 grid gap-4 sm:grid-cols-[1fr_auto]'>
+                  <div>
+                    <div class='amount-mode-grams'>
+                      <label class='input-label'>Граммы</label>
+                      <input
+                        type='number'
+                        min='1'
+                        max='5000'
+                        step='1'
+                        value='100'
+                        class='input-field amount-input'
+                        inputmode='numeric'
+                        data-allow-select='true'
+                      />
+                    </div>
+
+                    <div class='amount-mode-size hidden'>
+                      <label class='input-label'>Размер</label>
+                      <div class='grid grid-cols-3 gap-2'>
+                        <button type='button' class='size-option' data-size='small'>Маленький</button>
+                        <button type='button' class='size-option active' data-size='medium'>Средний</button>
+                        <button type='button' class='size-option' data-size='large'>Большой</button>
+                      </div>
+                      <p class='note-line size-note mt-2'>Для фруктов и части овощей можно выбирать размер вместо граммов.</p>
+                    </div>
+                  </div>
+                  <div class='sm:min-w-[180px] sm:self-end'>
+                    <button type='submit' class='btn w-full'>Добавить</button>
+                  </div>
+                </div>
+
+                <div class='preview-box mt-4'>
+                  <div class='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
+                    <div>
+                      <p class='text-sm font-semibold'>Автоподсчёт</p>
+                      <p class='preview-name' data-role='preview-name'>Ничего не выбрано</p>
+                    </div>
+                    <button type='button' class='btn-secondary clear-form-btn'>Сбросить</button>
+                  </div>
+                  <div class='meal-subgrid mt-4'>
+                    <div class='meal-stat'>
+                      <div class='meal-stat-label'>Калории</div>
+                      <div class='meal-stat-value' data-preview='calories'>0 ккал</div>
+                    </div>
+                    <div class='meal-stat'>
+                      <div class='meal-stat-label'>Белки</div>
+                      <div class='meal-stat-value' data-preview='protein'>0 г</div>
+                    </div>
+                    <div class='meal-stat'>
+                      <div class='meal-stat-label'>Жиры</div>
+                      <div class='meal-stat-value' data-preview='fat'>0 г</div>
+                    </div>
+                    <div class='meal-stat'>
+                      <div class='meal-stat-label'>Углеводы</div>
+                      <div class='meal-stat-value' data-preview='carbs'>0 г</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class='mt-4'>
+                  <p class='input-label'>Быстрый выбор</p>
+                  <div class='flex flex-wrap gap-2'>${quickButtons}</div>
+                </div>
+
+                <div class='error-line mt-3'></div>
+              </form>
+
+              <div class='soft-card p-4'>
+                <div class='mb-4 flex items-center justify-between gap-3'>
+                  <h3 class='text-lg font-semibold'>Блюда в этом блоке</h3>
+                  <div data-role='meal-count' class='rounded-full border border-[var(--border)] bg-[rgba(255,250,245,0.95)] px-3 py-2 text-sm font-semibold text-[var(--muted)]'>0 блюд</div>
+                </div>
+                <div class='meal-list space-y-3'></div>
+              </div>
+            </div>
+          </section>
+        `;
+      }).join('');
+    }
+
+    function renderMealQuickLinks() {
+      mealQuickLinks.innerHTML = '';
+      const fragment = document.createDocumentFragment();
+
+      MEALS.forEach((meal) => {
+        const totals = calculateTotals(getMealItems(meal.key));
+        const link = document.createElement('a');
+        link.href = `#meal-${meal.key}`;
+        link.className = 'chip-link';
+        link.innerHTML = `<span>${meal.title}</span><span class='text-sm text-[var(--muted)]'>${formatNumber(totals.calories)} ккал</span>`;
+        fragment.appendChild(link);
+      });
+
+      mealQuickLinks.appendChild(fragment);
+    }
+
+    function setProgress(element, current, goal) {
+      const safeGoal = Math.max(1, Number(goal) || 1);
+      const percent = Math.min((current / safeGoal) * 100, 100);
+      element.style.width = `${percent}%`;
+    }
+
+    function renderProfileSummary() {
+      if (!state.profile) {
+        profileElements.profileNameValue.textContent = '—';
+        profileElements.profileBodyValue.textContent = '—';
+        profileElements.profileActivityValue.textContent = '—';
+        profileElements.profileGoalValue.textContent = '—';
+        profileElements.profileCornerBody.textContent = '—';
+        profileElements.profileCornerGoal.textContent = '—';
+        profileElements.formulaSummary.textContent = 'Открой профиль и заполни данные, чтобы получить реалистичный расчёт целей.';
+        helloName.textContent = 'Профиль не заполнен';
+        heroText.textContent = 'Выбирай блюдо, пиши только граммы или миллилитры, а Belove сам считает калории, белки, жиры и углеводы по каждому приёму пищи и за весь день.';
+        return;
+      }
+
+      const calc = calculateGoalsFromProfile(state.profile);
+      const bodyText = `${formatNumber(state.profile.height)} см / ${formatNumber(state.profile.weight)} кг`;
+      const goalText = GOAL_LABELS[state.profile.goalMode] || '—';
+      profileElements.profileNameValue.textContent = state.profile.name;
+      profileElements.profileBodyValue.textContent = bodyText;
+      profileElements.profileActivityValue.textContent = ACTIVITY_LABELS[state.profile.activity] || '—';
+      profileElements.profileGoalValue.textContent = goalText;
+      profileElements.profileCornerBody.textContent = bodyText;
+      profileElements.profileCornerGoal.textContent = goalText;
+      profileElements.formulaSummary.textContent = `BMR: ${formatNumber(calc.bmr)} ккал · TDEE: ${formatNumber(calc.tdee)} ккал · Цели рассчитаны персонально по формуле Mifflin–St Jeor.`;
+      helloName.textContent = state.profile.name;
+      heroText.textContent = `${state.profile.name}, выбирай блюда, вводи только граммы или миллилитры, а Belove автоматически считает дневные калории, БЖУ и воду.`;
+    }
+
+    function renderWater() {
+      const total = getWaterTotal();
+      waterElements.waterHeadline.textContent = `${formatNumber(total)} мл`;
+      waterElements.waterGoalInline.textContent = `${formatNumber(total)} / ${formatNumber(state.goals.water)} мл`;
+      waterElements.progressWaterInline.style.width = `${Math.min((total / Math.max(state.goals.water, 1)) * 100, 100)}%`;
+      waterElements.waterEntriesCount.textContent = `${state.waterEntries.length} ${state.waterEntries.length === 1 ? 'запись' : state.waterEntries.length >= 2 && state.waterEntries.length <= 4 ? 'записи' : 'записей'}`;
+
+      if (!state.waterEntries.length) {
+        waterElements.waterList.innerHTML = '<div class="empty-box">Пока нет воды за сегодня. Добавь первый стакан.</div>';
+        return;
+      }
+
+      waterElements.waterList.innerHTML = state.waterEntries
+        .slice()
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .map((entry) => `
+          <div class='food-row'>
+            <div>
+              <div class='flex flex-wrap items-center gap-2'>
+                <h4 class='text-lg font-semibold text-[var(--text)]'>Вода</h4>
+                <span class='text-sm text-[var(--muted)]'>${formatNumber(entry.amount)} мл</span>
+              </div>
+              <div class='mt-2 text-sm text-[var(--muted)]'>Добавлено в ${formatTime(entry.createdAt)}</div>
+            </div>
+            <div>
+              <button class='remove-btn remove-water' type='button' data-id='${entry.id}'>Удалить</button>
+            </div>
+          </div>
+        `).join('');
+    }
+
+    function getAllLogs() {
+      const foodLogs = state.items.map((item) => ({
+        id: item.id,
+        type: 'food',
+        createdAt: item.createdAt,
+        title: item.name,
+        icon: '🍽',
+        meta: `${item.amountLabel || `${formatNumber(item.amount)} г`} • ${item.category}`,
+        detail: `${formatNumber(item.calories)} ккал • Б ${formatNumber(item.protein)} г • Ж ${formatNumber(item.fat)} г • У ${formatNumber(item.carbs)} г`,
+        meal: MEALS.find((meal) => meal.key === item.meal)?.title || 'Приём пищи'
+      }));
+
+      const waterLogs = state.waterEntries.map((entry) => ({
+        id: entry.id,
+        type: 'water',
+        createdAt: entry.createdAt,
+        title: 'Вода',
+        icon: '💧',
+        meta: `${formatNumber(entry.amount)} мл`,
+        detail: 'Добавлена в дневной водный баланс',
+        meal: 'Вода'
+      }));
+
+      return [...foodLogs, ...waterLogs].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    }
+
+    function renderWeeklyHistory() {
+      const today = new Date();
+      const days = [];
+
+      for (let i = 6; i >= 0; i -= 1) {
+        const date = new Date(today);
+        date.setHours(0, 0, 0, 0);
+        date.setDate(today.getDate() - i);
+        const key = getDateKey(date);
+
+        const foodForDay = state.items.filter((item) => getDateKey(item.createdAt) === key);
+        const waterForDay = state.waterEntries.filter((entry) => getDateKey(entry.createdAt) === key);
+        const foodTotals = calculateTotals(foodForDay);
+        const waterTotal = waterForDay.reduce((sum, entry) => sum + (Number(entry.amount) || 0), 0);
+
+        days.push({
+          key,
+          label: formatWeekLabel(date),
+          calories: foodTotals.calories,
+          water: waterTotal,
+          entries: foodForDay.length,
+          isToday: isSameDay(date, today)
+        });
+      }
+
+      logElements.weeklyHistory.innerHTML = days.map((day) => `
+        <div class='week-day-card ${day.isToday ? 'today' : ''}'>
+          <div class='week-day-label'>${escapeHtml(day.label)}</div>
+          <div class='week-day-kcal'>${formatNumber(day.calories)} ккал</div>
+          <div class='week-day-water'>Вода: ${formatNumber(day.water)} мл<br>Блюд: ${day.entries}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderDailyLogs() {
+      const logs = getAllLogs();
+      const filteredLogs = state.logFilter === 'all' ? logs : logs.filter((log) => log.type === state.logFilter);
+      logElements.logCount.textContent = `${filteredLogs.length} ${filteredLogs.length === 1 ? 'событие' : filteredLogs.length >= 2 && filteredLogs.length <= 4 ? 'события' : 'событий'}`;
+
+      logElements.historyFilters?.querySelectorAll('[data-log-filter]').forEach((button) => {
+        button.classList.toggle('active', button.dataset.logFilter === state.logFilter);
+      });
+
+      renderWeeklyHistory();
+
+      if (!filteredLogs.length) {
+        logElements.dailyLogList.innerHTML = '<div class="empty-box">По этому фильтру пока нет записей. Добавь еду или воду, и история появится здесь.</div>';
+        return;
+      }
+
+      logElements.dailyLogList.innerHTML = filteredLogs.map((log) => `
+        <article class='log-entry'>
+          <div class='log-entry-icon ${log.type === 'water' ? 'water' : ''}'>${log.icon}</div>
+          <div>
+            <div class='flex flex-wrap items-center gap-2'>
+              <h4 class='log-entry-title'>${escapeHtml(log.title)}</h4>
+              <span class='log-entry-pill'>${escapeHtml(log.meta)}</span>
+            </div>
+            <div class='log-entry-meta'>${escapeHtml(log.meal)} • ${formatTime(log.createdAt)}</div>
+            <div class='log-entry-detail'>${escapeHtml(log.detail)}</div>
+          </div>
+          <div class='log-entry-side'>${log.type === 'water' ? 'вода' : 'еда'}</div>
+        </article>
+      `).join('');
+    }
+
+    function renderSummary() {
+      const totals = calculateTotals(state.items);
+      const waterTotal = getWaterTotal();
+
+      summaryElements.dayCalories.textContent = formatNumber(totals.calories);
+      summaryElements.dayProtein.textContent = `${formatNumber(totals.protein)} г`;
+      summaryElements.dayFat.textContent = `${formatNumber(totals.fat)} г`;
+      summaryElements.dayCarbs.textContent = `${formatNumber(totals.carbs)} г`;
+      summaryElements.dayWater.textContent = `${formatNumber(waterTotal)} мл`;
+      summaryElements.dayEntries.textContent = state.items.length;
+
+      summaryElements.goalLabelCalories.textContent = `${formatNumber(totals.calories)} / ${formatNumber(state.goals.calories)} ккал`;
+      summaryElements.goalLabelProtein.textContent = `${formatNumber(totals.protein)} / ${formatNumber(state.goals.protein)} г`;
+      summaryElements.goalLabelFat.textContent = `${formatNumber(totals.fat)} / ${formatNumber(state.goals.fat)} г`;
+      summaryElements.goalLabelCarbs.textContent = `${formatNumber(totals.carbs)} / ${formatNumber(state.goals.carbs)} г`;
+      summaryElements.goalLabelWater.textContent = `${formatNumber(waterTotal)} / ${formatNumber(state.goals.water)} мл`;
+
+      setProgress(summaryElements.progressCalories, totals.calories, state.goals.calories);
+      setProgress(summaryElements.progressProtein, totals.protein, state.goals.protein);
+      setProgress(summaryElements.progressFat, totals.fat, state.goals.fat);
+      setProgress(summaryElements.progressCarbs, totals.carbs, state.goals.carbs);
+      setProgress(summaryElements.progressWater, waterTotal, state.goals.water);
+
+      renderMealQuickLinks();
+      renderProfileSummary();
+      renderWater();
+      renderDailyLogs();
+    }
+
+    function renderMealLists() {
+      MEALS.forEach((meal) => {
+        const section = mealSections.querySelector(`.meal-section[data-meal-key='${meal.key}']`);
+        if (!section) return;
+
+        const list = section.querySelector('.meal-list');
+        const items = getMealItems(meal.key);
+        const totals = calculateTotals(items);
+
+        section.querySelector('[data-total="calories"]').textContent = `${formatNumber(totals.calories)} ккал`;
+        section.querySelector('[data-total="protein"]').textContent = `${formatNumber(totals.protein)} г`;
+        section.querySelector('[data-total="fat"]').textContent = `${formatNumber(totals.fat)} г`;
+        section.querySelector('[data-total="carbs"]').textContent = `${formatNumber(totals.carbs)} г`;
+        section.querySelector('[data-role="meal-count"]').textContent = `${items.length} ${items.length === 1 ? 'блюдо' : items.length >= 2 && items.length <= 4 ? 'блюда' : 'блюд'}`;
+
+        if (!items.length) {
+          list.innerHTML = '<div class="empty-box">Пока пусто. Выбери блюдо, фрукт, овощ, рыбу, мясо, пасту или другой продукт и добавь его сюда.</div>';
+          return;
+        }
+
+        list.innerHTML = items.map((item) => `
+          <div class='food-row'>
+            <div>
+              <div class='flex flex-wrap items-center gap-2'>
+                <h4 class='text-lg font-semibold text-[var(--text)]'>${escapeHtml(item.name)}</h4>
+                <span class='text-sm text-[var(--muted)]'>${escapeHtml(item.amountLabel || `${formatNumber(item.amount)} г`)}</span>
+              </div>
+              <div class='mt-2 text-sm text-[var(--muted)]'>${escapeHtml(item.category)}</div>
+              <div class='macro-row'>
+                <span class='macro-badge'>Ккал: ${formatNumber(item.calories)}</span>
+                ${createMacroBadge('Б', item.protein)}
+                ${createMacroBadge('Ж', item.fat)}
+                ${createMacroBadge('У', item.carbs)}
+              </div>
+            </div>
+            <div>
+              <button class='remove-btn remove-product' type='button' data-id='${item.id}'>Удалить</button>
+            </div>
+          </div>
+        `).join('');
+      });
+    }
+
+    function renderAll() {
+      renderSummary();
+      renderMealLists();
+      mealSections.querySelectorAll('.meal-form').forEach((form) => updatePreview(form));
+      syncGoalInputs();
+    }
+
+    function closeDropdown(form) {
+      const dropdown = form.querySelector('.search-dropdown');
+      dropdown.classList.add('hidden');
+      const mealKey = form.dataset.mealKey;
+      state.search[mealKey].results = [];
+      state.search[mealKey].activeIndex = -1;
+    }
+
+    function renderDropdown(form, results) {
+      const dropdown = form.querySelector('.search-dropdown');
+      const resultsWrap = form.querySelector('.search-results');
+      const mealKey = form.dataset.mealKey;
+      const searchState = state.search[mealKey];
+
+      searchState.results = results;
+
+      if (!results.length) {
+        closeDropdown(form);
+        return;
+      }
+
+      if (searchState.activeIndex >= results.length || searchState.activeIndex < 0) {
+        searchState.activeIndex = 0;
+      }
+
+      resultsWrap.innerHTML = results.map((product, index) => `
+        <button
+          type='button'
+          class='dropdown-option ${index === searchState.activeIndex ? 'active' : ''}'
+          data-product-id='${product.id}'
+        >
+          <div class='flex items-start justify-between gap-3'>
+            <div class='min-w-0'>
+              <div class='truncate text-sm font-semibold text-[var(--text)]'>${escapeHtml(product.name)}</div>
+              <div class='mt-1 text-xs text-[var(--muted)]'>${escapeHtml(product.category)} • на 100 г</div>
+            </div>
+            <div class='shrink-0 rounded-full border border-[var(--border)] bg-[rgba(255,248,242,0.9)] px-3 py-1 text-xs font-semibold text-[var(--accent)]'>${formatNumber(product.calories)} ккал</div>
+          </div>
+          <div class='macro-row mt-3'>
+            ${createMacroBadge('Б', product.protein)}
+            ${createMacroBadge('Ж', product.fat)}
+            ${createMacroBadge('У', product.carbs)}
+          </div>
+        </button>
+      `).join('');
+
+      dropdown.classList.remove('hidden');
+    }
+
+    function updateDropdownForForm(form, query) {
+      const results = getMatches(query);
+      const mealKey = form.dataset.mealKey;
+      state.search[mealKey].activeIndex = results.length ? 0 : -1;
+      renderDropdown(form, results);
+    }
+
+    function updateAmountMode(form, product) {
+      const gramsWrap = form.querySelector('.amount-mode-grams');
+      const sizeWrap = form.querySelector('.amount-mode-size');
+      const sizeNote = form.querySelector('.size-note');
+
+      if (isSizeModeProduct(product)) {
+        gramsWrap.classList.add('hidden');
+        sizeWrap.classList.remove('hidden');
+        const selectedSize = getSelectedSize(form);
+        const selectedWeight = getWeightForProductInput(product, { size: selectedSize });
+        sizeNote.textContent = `Выбран размер «${getSizeLabel(selectedSize)}» — примерно ${formatNumber(selectedWeight)} г.`;
+      } else {
+        gramsWrap.classList.remove('hidden');
+        sizeWrap.classList.add('hidden');
+        sizeNote.textContent = 'Для фруктов и части овощей Belove считает по размеру.';
+      }
+    }
+
+    function setActiveSizeButton(form, sizeKey) {
+      form.dataset.selectedSize = sizeKey;
+      form.querySelectorAll('.size-option').forEach((button) => {
+        button.classList.toggle('active', button.dataset.size === sizeKey);
+      });
+    }
+
+    function updateSelectionNote(form, product) {
+      const note = form.querySelector('.selection-note');
+      if (!product) {
+        note.textContent = 'Выбери блюдо из базы — Belove сам посчитает калории и БЖУ.';
+        return;
+      }
+
+      if (isSizeModeProduct(product)) {
+        note.textContent = `${product.category}. Для этого продукта можно выбрать размер: маленький, средний или большой.`;
+        return;
+      }
+
+      note.textContent = `${product.category}. Вводи только граммы — расчёт идёт автоматически.`;
+    }
+
+    function getSelectedProduct(form) {
+      return getProductById(form.dataset.selectedProductId || '');
+    }
+
+    function getInputAmount(form) {
+      const amountInput = form.querySelector('.amount-input');
+      const raw = String(amountInput.value || '').trim();
+      if (!raw) return null;
+      const amount = Number(raw);
+      if (!Number.isFinite(amount) || amount <= 0) return null;
+      return amount;
+    }
+
+    function updatePreview(form) {
+      const selectedProduct = getSelectedProduct(form);
+      const previewName = form.querySelector('[data-role="preview-name"]');
+
+      if (!selectedProduct) {
+        previewName.textContent = 'Ничего не выбрано';
+        form.querySelector('[data-preview="calories"]').textContent = '0 ккал';
+        form.querySelector('[data-preview="protein"]').textContent = '0 г';
+        form.querySelector('[data-preview="fat"]').textContent = '0 г';
+        form.querySelector('[data-preview="carbs"]').textContent = '0 г';
+        return;
+      }
+
+      let preview;
+      if (isSizeModeProduct(selectedProduct)) {
+        const sizeKey = getSelectedSize(form);
+        preview = calculateForInput(selectedProduct, { size: sizeKey });
+        previewName.textContent = `${selectedProduct.name} · ${getSizeLabel(sizeKey)} · ${formatNumber(preview.amount)} г`;
+      } else {
+        const amount = getInputAmount(form);
+        if (!amount) {
+          previewName.textContent = `${selectedProduct.name} · введи граммы`;
+          form.querySelector('[data-preview="calories"]').textContent = '0 ккал';
+          form.querySelector('[data-preview="protein"]').textContent = '0 г';
+          form.querySelector('[data-preview="fat"]').textContent = '0 г';
+          form.querySelector('[data-preview="carbs"]').textContent = '0 г';
+          updateAmountMode(form, selectedProduct);
+          return;
+        }
+        preview = calculateForInput(selectedProduct, { amount });
+        previewName.textContent = `${selectedProduct.name} · ${formatNumber(preview.amount)} г`;
+      }
+
+      form.querySelector('[data-preview="calories"]').textContent = `${formatNumber(preview.calories)} ккал`;
+      form.querySelector('[data-preview="protein"]').textContent = `${formatNumber(preview.protein)} г`;
+      form.querySelector('[data-preview="fat"]').textContent = `${formatNumber(preview.fat)} г`;
+      form.querySelector('[data-preview="carbs"]').textContent = `${formatNumber(preview.carbs)} г`;
+      updateAmountMode(form, selectedProduct);
+    }
+
+    function setSelectedProduct(form, product) {
+      if (!product) {
+        form.dataset.selectedProductId = '';
+        updateAmountMode(form, null);
+        updateSelectionNote(form, null);
+        updatePreview(form);
+        return;
+      }
+
+      form.dataset.selectedProductId = product.id;
+      form.querySelector('.product-search').value = product.name;
+      setActiveSizeButton(form, 'medium');
+      updateAmountMode(form, product);
+      updateSelectionNote(form, product);
+      updatePreview(form);
+    }
+
+    function clearForm(form) {
+      form.dataset.selectedProductId = '';
+      form.dataset.selectedSize = 'medium';
+      form.querySelector('.product-search').value = '';
+      form.querySelector('.amount-input').value = '100';
+      form.querySelector('.error-line').textContent = '';
+      setActiveSizeButton(form, 'medium');
+      updateAmountMode(form, null);
+      updateSelectionNote(form, null);
+      updatePreview(form);
+      closeDropdown(form);
+    }
+
+    function addEntry(mealKey, product, options = {}) {
+      const values = calculateForInput(product, options);
+      state.items.unshift({
+        id: getId(),
+        meal: mealKey,
+        productId: product.id,
+        name: product.name,
+        category: product.category,
+        amount: roundOne(values.amount),
+        amountLabel: values.size ? `${getSizeLabel(values.size)} · ~${formatNumber(values.amount)} г` : `${formatNumber(values.amount)} г`,
+        calories: values.calories,
+        protein: values.protein,
+        fat: values.fat,
+        carbs: values.carbs,
+        createdAt: new Date().toISOString()
+      });
+      saveItems();
+      renderAll();
+    }
+
+    function removeEntry(id) {
+      state.items = state.items.filter((item) => item.id !== id);
+      saveItems();
+      renderAll();
+    }
+
+    function addWater(amount) {
+      const safeAmount = Number(amount);
+      if (!Number.isFinite(safeAmount) || safeAmount <= 0) {
+        waterElements.waterError.textContent = 'Укажи корректный объём воды.';
+        return false;
+      }
+
+      state.waterEntries.push({
+        id: getId(),
+        amount: roundOne(safeAmount),
+        createdAt: new Date().toISOString()
+      });
+
+      waterElements.waterError.textContent = '';
+      waterElements.waterAmountInput.value = '';
+      saveWater();
+      renderSummary();
+      return true;
+    }
+
+    function removeWater(id) {
+      state.waterEntries = state.waterEntries.filter((entry) => entry.id !== id);
+      saveWater();
+      renderSummary();
+    }
+
+    function updateGoalsFromInputs() {
+      state.goals = {
+        calories: Math.max(1, Number(goalInputs.calories.value) || DEFAULT_GOALS.calories),
+        protein: Math.max(1, Number(goalInputs.protein.value) || DEFAULT_GOALS.protein),
+        fat: Math.max(1, Number(goalInputs.fat.value) || DEFAULT_GOALS.fat),
+        carbs: Math.max(1, Number(goalInputs.carbs.value) || DEFAULT_GOALS.carbs),
+        water: Math.max(100, Number(goalInputs.water.value) || DEFAULT_GOALS.water)
+      };
+      saveGoals();
+      renderSummary();
+    }
+
+    function openAccountPrompt() {
+      if (state.profile || state.accountPromptShown) return;
+      state.accountPromptShown = true;
+      accountPromptElements.modal.classList.remove('hidden');
+    }
+
+    function closeAccountPrompt() {
+      accountPromptElements.modal.classList.add('hidden');
+    }
+
+    function promptAccountOnFirstInput() {
+      if (state.profile || state.accountPromptShown) return;
+      openAccountPrompt();
+    }
+
+    function openProfileModal() {
+      closeAccountPrompt();
+
+      const profile = state.profile || {
+        name: '',
+        sex: 'female',
+        age: '',
+        height: '',
+        weight: '',
+        activity: 'light',
+        goalMode: 'maintain'
+      };
+
+      modalElements.name.value = profile.name || '';
+      modalElements.age.value = profile.age || '';
+      modalElements.height.value = profile.height || '';
+      modalElements.weight.value = profile.weight || '';
+      setChoiceValue('sex', profile.sex || 'female');
+      setChoiceValue('activity', profile.activity || 'light');
+      setChoiceValue('goalMode', profile.goalMode || 'maintain');
+      modalElements.error.textContent = '';
+      modalElements.closeBtn.style.visibility = state.profile ? 'visible' : 'hidden';
+      modalElements.modal.classList.remove('hidden');
+    }
+
+    function closeProfileModal() {
+      if (!state.profile) return;
+      modalElements.modal.classList.add('hidden');
+    }
+
+    function saveProfileFromForm() {
+      const name = modalElements.name.value.trim();
+      const age = Number(modalElements.age.value);
+      const height = Number(modalElements.height.value);
+      const weight = Number(modalElements.weight.value);
+      const sex = getProfileSelection('sex');
+      const activity = getProfileSelection('activity');
+      const goalMode = getProfileSelection('goalMode');
+
+      if (!name || !Number.isFinite(age) || !Number.isFinite(height) || !Number.isFinite(weight)) {
+        modalElements.error.textContent = 'Заполни имя, возраст, рост и вес.';
+        return false;
+      }
+
+      if (age < 10 || age > 100 || height < 120 || height > 230 || weight < 30 || weight > 300) {
+        modalElements.error.textContent = 'Проверь значения профиля.';
+        return false;
+      }
+
+      state.profile = {
+        name,
+        age,
+        height,
+        weight,
+        sex,
+        activity,
+        goalMode
+      };
+
+      const calc = calculateGoalsFromProfile(state.profile);
+      state.goals = { ...calc.goals };
+
+      saveProfile();
+      saveGoals();
+      syncGoalInputs();
+      renderAll();
+      modalElements.modal.classList.add('hidden');
+      showToast('Профиль сохранён.');
+      return true;
+    }
+
+    function applyRecalculatedGoals() {
+      if (!state.profile) {
+        openProfileModal();
+        return;
+      }
+      const calc = calculateGoalsFromProfile(state.profile);
+      state.goals = { ...calc.goals };
+      saveGoals();
+      syncGoalInputs();
+      renderSummary();
+      showToast('Цели пересчитаны по профилю.');
+    }
+
+    function protectTextCopy() {
+      document.addEventListener('copy', (event) => {
+        if (!event.target.closest('input, textarea')) {
+          event.preventDefault();
+        }
+      });
+
+      document.addEventListener('cut', (event) => {
+        if (!event.target.closest('input, textarea')) {
+          event.preventDefault();
+        }
+      });
+
+      document.addEventListener('selectstart', (event) => {
+        if (!event.target.closest('input, textarea')) {
+          event.preventDefault();
+        }
+      });
+
+      document.addEventListener('contextmenu', (event) => {
+        if (!event.target.closest('input, textarea')) {
+          event.preventDefault();
+        }
+      });
+    }
+
+    mealSections.addEventListener('input', (event) => {
+      const form = event.target.closest('.meal-form');
+      if (!form) return;
+
+      if (event.target.matches('.product-search, .amount-input')) {
+        const rawValue = String(event.target.value || '').trim();
+        if (rawValue) {
+          promptAccountOnFirstInput();
+        }
+      }
+
+      if (event.target.classList.contains('product-search')) {
+        const query = event.target.value;
+        const exactProduct = getProductByName(query);
+
+        if (exactProduct) {
+          setSelectedProduct(form, exactProduct);
+        } else {
+          form.dataset.selectedProductId = '';
+          updateAmountMode(form, null);
+          updateSelectionNote(form, null);
+          updatePreview(form);
+        }
+
+        updateDropdownForForm(form, query);
+      }
+
+      if (event.target.classList.contains('amount-input')) {
+        updatePreview(form);
+      }
+    });
+
+    mealSections.addEventListener('focusin', (event) => {
+      const input = event.target.closest('.product-search');
+      if (!input) return;
+      const form = input.closest('.meal-form');
+      updateDropdownForForm(form, input.value);
+    });
+
+    mealSections.addEventListener('focusout', (event) => {
+      const amountInput = event.target.closest('.amount-input');
+      if (!amountInput) return;
+      const raw = String(amountInput.value || '').trim();
+      if (!raw) return;
+      const amount = Number(raw);
+      if (!Number.isFinite(amount) || amount <= 0) {
+        amountInput.value = '100';
+      } else if (amount > 5000) {
+        amountInput.value = '5000';
+      } else {
+        amountInput.value = String(Math.round(amount));
+      }
+      const form = amountInput.closest('.meal-form');
+      updatePreview(form);
+    });
+
+    mealSections.addEventListener('keydown', (event) => {
+      const input = event.target.closest('.product-search');
+      if (!input) return;
+
+      const form = input.closest('.meal-form');
+      const mealKey = form.dataset.mealKey;
+      const searchState = state.search[mealKey];
+      const results = searchState.results;
+
+      if (!results.length) return;
+
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        searchState.activeIndex = (searchState.activeIndex + 1) % results.length;
+        renderDropdown(form, results);
+      }
+
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        searchState.activeIndex = (searchState.activeIndex - 1 + results.length) % results.length;
+        renderDropdown(form, results);
+      }
+
+      if (event.key === 'Enter') {
+        const product = results[searchState.activeIndex] || getProductByName(input.value);
+        if (product) {
+          event.preventDefault();
+          setSelectedProduct(form, product);
+          closeDropdown(form);
+        }
+      }
+
+      if (event.key === 'Escape') {
+        closeDropdown(form);
+      }
+    });
+
+    mealSections.addEventListener('submit', (event) => {
+      const form = event.target.closest('.meal-form');
+      if (!form) return;
+      event.preventDefault();
+
+      const errorLine = form.querySelector('.error-line');
+      let product = getSelectedProduct(form);
+      const inputValue = form.querySelector('.product-search').value.trim();
+      const size = getSelectedSize(form);
+      const amount = getInputAmount(form);
+
+      if (!product && inputValue) {
+        const exactProduct = getProductByName(inputValue);
+        if (exactProduct) {
+          product = exactProduct;
+          setSelectedProduct(form, exactProduct);
+        }
+      }
+
+      if (!product) {
+        errorLine.textContent = 'Выбери блюдо или продукт из базы.';
+        showToast('Сначала выбери продукт из списка.');
+        return;
+      }
+
+      if (!isSizeModeProduct(product) && !amount) {
+        errorLine.textContent = 'Укажи корректную граммовку.';
+        showToast('Проверь граммы.');
+        return;
+      }
+
+      errorLine.textContent = '';
+      addEntry(form.dataset.mealKey, product, isSizeModeProduct(product) ? { size } : { amount });
+      clearForm(form);
+
+      const mealTitle = MEALS.find((item) => item.key === form.dataset.mealKey)?.title || 'приём пищи';
+      showToast(`Добавлено в «${mealTitle}».`);
+    });
+
+    mealSections.addEventListener('click', (event) => {
+      const removeButton = event.target.closest('.remove-product');
+      if (removeButton) {
+        removeEntry(removeButton.dataset.id);
+        showToast('Блюдо удалено.');
+        return;
+      }
+
+      const clearButton = event.target.closest('.clear-form-btn');
+      if (clearButton) {
+        const form = clearButton.closest('.meal-form');
+        clearForm(form);
+        form.querySelector('.product-search').focus();
+        return;
+      }
+
+      const sizeButton = event.target.closest('.size-option');
+      if (sizeButton) {
+        const form = sizeButton.closest('.meal-form');
+        const product = getSelectedProduct(form);
+        if (product && isSizeModeProduct(product)) {
+          setActiveSizeButton(form, sizeButton.dataset.size || 'medium');
+          updatePreview(form);
+        }
+        return;
+      }
+
+      const option = event.target.closest('.dropdown-option');
+      if (option) {
+        const form = option.closest('.meal-form');
+        const product = getProductById(option.dataset.productId);
+        if (product) {
+          setSelectedProduct(form, product);
+          closeDropdown(form);
+          if (isSizeModeProduct(product)) {
+            form.querySelector('.size-option[data-size="medium"]')?.focus();
+          } else {
+            form.querySelector('.amount-input').focus();
+          }
+        }
+        return;
+      }
+
+      const quickPick = event.target.closest('[data-action="quick-pick"]');
+      if (quickPick) {
+        const form = quickPick.closest('.meal-form');
+        const product = getProductByName(quickPick.dataset.productName);
+        if (product) {
+          setSelectedProduct(form, product);
+          closeDropdown(form);
+          if (isSizeModeProduct(product)) {
+            form.querySelector('.size-option[data-size="medium"]')?.focus();
+          } else {
+            form.querySelector('.amount-input').focus();
+          }
+        }
+      }
+    });
+
+    document.addEventListener('click', (event) => {
+      const insideSearch = event.target.closest('.search-wrap');
+      if (insideSearch) return;
+      mealSections.querySelectorAll('.meal-form').forEach((form) => closeDropdown(form));
+    });
+
+    document.addEventListener('click', (event) => {
+      const choice = event.target.closest('.choice-btn');
+      if (!choice) return;
+      const group = choice.dataset.group;
+      setChoiceValue(group, choice.dataset.value || '');
+    });
+
+    document.addEventListener('click', (event) => {
+      const filterButton = event.target.closest('[data-log-filter]');
+      if (filterButton) {
+        state.logFilter = filterButton.dataset.logFilter || 'all';
+        renderDailyLogs();
+        return;
+      }
+
+      const waterChip = event.target.closest('[data-water-add]');
+      if (!waterChip) return;
+      const added = addWater(Number(waterChip.dataset.waterAdd));
+      if (added) {
+        showToast('Вода добавлена.');
+      }
+    });
+
+    waterElements.addWaterBtn.addEventListener('click', () => {
+      const amount = Number(waterElements.waterAmountInput.value);
+      if (addWater(amount)) {
+        showToast('Вода добавлена.');
+      }
+    });
+
+    waterElements.waterAmountInput.addEventListener('input', () => {
+      const rawValue = String(waterElements.waterAmountInput.value || '').trim();
+      if (rawValue) {
+        promptAccountOnFirstInput();
+      }
+    });
+
+    waterElements.waterAmountInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        const amount = Number(waterElements.waterAmountInput.value);
+        if (addWater(amount)) {
+          showToast('Вода добавлена.');
+        }
+      }
+    });
+
+    waterElements.waterList.addEventListener('click', (event) => {
+      const removeButton = event.target.closest('.remove-water');
+      if (!removeButton) return;
+      removeWater(removeButton.dataset.id);
+      showToast('Запись воды удалена.');
+    });
+
+    goalsForm.addEventListener('input', (event) => {
+      const rawValue = String(event.target.value || '').trim();
+      if (rawValue) {
+        promptAccountOnFirstInput();
+      }
+      updateGoalsFromInputs();
+    });
+
+    resetGoalsBtn.addEventListener('click', () => {
+      if (state.profile) {
+        state.goals = { ...calculateGoalsFromProfile(state.profile).goals };
+      } else {
+        state.goals = { ...DEFAULT_GOALS };
+      }
+      saveGoals();
+      syncGoalInputs();
+      renderSummary();
+      showToast('Цели обновлены.');
+    });
+
+    clearDayBtn.addEventListener('click', () => {
+      const hasFood = state.items.length > 0;
+      const hasWater = state.waterEntries.length > 0;
+
+      if (!hasFood && !hasWater) {
+        showToast('День уже пуст.');
+        return;
+      }
+
+      state.items = [];
+      state.waterEntries = [];
+      saveItems();
+      saveWater();
+      renderAll();
+      showToast('Данные за день очищены.');
+    });
+
+    editProfileBtn.addEventListener('click', openProfileModal);
+    recalculateBtn.addEventListener('click', applyRecalculatedGoals);
+    modalElements.closeBtn.addEventListener('click', closeProfileModal);
+
+    modalElements.form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      saveProfileFromForm();
+    });
+
+    modalElements.resetBtn.addEventListener('click', () => {
+      state.profile = null;
+      localStorage.removeItem(STORAGE_KEYS.profile);
+      state.goals = { ...DEFAULT_GOALS };
+      saveGoals();
+      syncGoalInputs();
+      renderAll();
+      openProfileModal();
+      showToast('Профиль сброшен.');
+    });
+
+    accountPromptElements.openBtn.addEventListener('click', () => {
+      openProfileModal();
+    });
+
+    accountPromptElements.closeBtn.addEventListener('click', () => {
+      closeAccountPrompt();
+      showToast('Профиль можно заполнить позже.');
+    });
+
+    accountPromptElements.modal.addEventListener('click', (event) => {
+      if (event.target === accountPromptElements.modal) {
+        closeAccountPrompt();
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !accountPromptElements.modal.classList.contains('hidden')) {
+        closeAccountPrompt();
+      }
+    });
+
+    // Инициализация приложения.
+    document.body.classList.add('page-enter');
+    loadState();
+    protectTextCopy();
+    setCurrentDate();
+    createMealSections();
+    renderAll();
+    setupRevealAnimations();
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        document.body.classList.add('page-ready');
+        document.body.classList.remove('page-enter');
+      });
+    });
+  </script>
+</body>
+</html>
